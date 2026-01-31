@@ -1,13 +1,10 @@
 import { Route, Routes } from "react-router-dom";
 import "./App.css";
-import {
-  Navbar,
-  Footer,
-  Home,
-  Detect,
-  NotFound,
-  Dashboard,
-} from "./components";
+import { Navbar, Footer, Home, NotFound, Dashboard } from "./components";
+
+import DetectTranslatePage from "./pages/DetectTranslatePage";
+import DetectPracticePage from "./pages/DetectPracticePage";
+
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -32,12 +29,10 @@ const Layout = ({ children }) => {
 };
 
 function App() {
-  
   return (
     <div className="App">
       <Routes>
         <Route
-          exact
           path="/"
           element={
             <Layout notifyMsg={notifyMsg}>
@@ -46,27 +41,36 @@ function App() {
           }
         />
 
+        {/* TRANSLATE */}
         <Route
-          exact
           path="/detect"
           element={
             <Layout>
-              <Detect />
+              <DetectTranslatePage />
+            </Layout>
+          }
+        />
+
+        {/* PRACTICE */}
+        <Route
+          path="/practice"
+          element={
+            <Layout>
+              <DetectPracticePage />
             </Layout>
           }
         />
 
         <Route
-          exact
           path="/dashboard"
           element={
             <Layout>
-              <Dashboard/>
+              <Dashboard />
             </Layout>
           }
         />
 
-        <Route exact path="*" element={<NotFound />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
 
       <ToastContainer

@@ -1,22 +1,21 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import "./Detect.css";
+import "../components/Detect/Detect.css"; // ajustează dacă path-ul tău e altul
 import { v4 as uuidv4 } from "uuid";
 import { FilesetResolver, GestureRecognizer } from "@mediapipe/tasks-vision";
 import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
 import { HAND_CONNECTIONS } from "@mediapipe/hands";
 
 import Webcam from "react-webcam";
-import { SignImageData } from "../../data/SignImageData";
+import { SignImageData } from "../data/SignImageData";
 import { useDispatch, useSelector } from "react-redux";
-import { addSignData } from "../../redux/actions/signdataaction";
-import ProgressBar from "./ProgressBar/ProgressBar";
+import { addSignData } from "../redux/actions/signdataaction";
+import ProgressBar from "../components/Detect/ProgressBar/ProgressBar"; // ajustează dacă path diferit
 
-import DisplayImg from "../../assests/displayGif.gif";
-import { useLocation, useNavigate } from "react-router-dom";
+import DisplayImg from "../assests/displayGif.gif";
 
 let startTime = "";
 
-const Detect = () => {
+const DetectCore = ({ mode = "translate" }) => {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [webcamRunning, setWebcamRunning] = useState(false);
@@ -26,22 +25,13 @@ const Detect = () => {
   const [progress, setProgress] = useState(0);
 
   const requestRef = useRef();
-
   const [detectedData, setDetectedData] = useState([]);
 
   const user = useSelector((state) => state.auth?.user);
   const { accessToken } = useSelector((state) => state.auth);
-
   const dispatch = useDispatch();
 
   const [currentImage, setCurrentImage] = useState(null);
-
-  // ✅ Mode derivat din URL:
-  // /practice => practice mode
-  // orice altceva (ex: /detect) => translate mode
-  const location = useLocation();
-  const navigate = useNavigate();
-  const mode = location.pathname.startsWith("/practice") ? "practice" : "translate";
 
   // imaginile de practice se schimbă DOAR când e mode === "practice"
   useEffect(() => {
@@ -74,12 +64,7 @@ const Detect = () => {
 
     const canvasCtx = canvasRef.current.getContext("2d");
     canvasCtx.save();
-    canvasCtx.clearRect(
-      0,
-      0,
-      canvasRef.current.width,
-      canvasRef.current.height
-    );
+    canvasCtx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
     const videoWidth = webcamRef.current.video.videoWidth;
     const videoHeight = webcamRef.current.video.videoHeight;
@@ -95,7 +80,6 @@ const Detect = () => {
     canvasRef.current.width = videoWidth;
     canvasRef.current.height = videoHeight;
 
-    // desenăm mâinile
     if (results.landmarks) {
       for (const landmarks of results.landmarks) {
         drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
@@ -113,9 +97,7 @@ const Detect = () => {
 
       setDetectedData((prevData) => [
         ...prevData,
-        {
-          SignDetected: gestureName,
-        },
+        { SignDetected: gestureName },
       ]);
 
       setGestureOutput(gestureName);
@@ -144,29 +126,20 @@ const Detect = () => {
     }
 
     if (webcamRunning === true) {
-      // STOP
       setWebcamRunning(false);
       cancelAnimationFrame(requestRef.current);
       setCurrentImage(null);
 
-      // curățăm canvas-ul și outputul, ca să nu rămână mâna / semnul vechi
       if (canvasRef.current) {
         const ctx = canvasRef.current.getContext("2d");
-        ctx.clearRect(
-          0,
-          0,
-          canvasRef.current.width,
-          canvasRef.current.height
-        );
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
       }
       setGestureOutput("");
       setProgress(0);
 
       const endTime = new Date();
-
       const timeElapsed = (
-        (endTime.getTime() - startTime.getTime()) /
-        1000
+        (endTime.getTime() - startTime.getTime()) / 1000
       ).toFixed(2);
 
       const nonEmptyData = detectedData.filter(
@@ -182,21 +155,15 @@ const Detect = () => {
           current = nonEmptyData[i];
         }
       }
-
-      if (current) {
-        resultArray.push(current);
-      }
+      if (current) resultArray.push(current);
 
       const countMap = new Map();
-
       for (const item of resultArray) {
         const count = countMap.get(item.SignDetected) || 0;
         countMap.set(item.SignDetected, count + 1);
       }
 
-      const sortedArray = Array.from(countMap.entries()).sort(
-        (a, b) => b[1] - a[1]
-      );
+      const sortedArray = Array.from(countMap.entries()).sort((a, b) => b[1] - a[1]);
 
       const outputArray = sortedArray
         .slice(0, 5)
@@ -214,7 +181,6 @@ const Detect = () => {
       dispatch(addSignData(data));
       setDetectedData([]);
     } else {
-      // START
       setWebcamRunning(true);
       startTime = new Date();
       requestRef.current = requestAnimationFrame(animate);
@@ -229,32 +195,12 @@ const Detect = () => {
     dispatch,
   ]);
 
-  // ✅ Oprim webcam-ul când schimbăm pagina (/detect <-> /practice)
-  useEffect(() => {
-    if (webcamRunning) {
-      setWebcamRunning(false);
-      cancelAnimationFrame(requestRef.current);
-      setCurrentImage(null);
-      setGestureOutput("");
-      setProgress(0);
-
-      if (canvasRef.current) {
-        const ctx = canvasRef.current.getContext("2d");
-        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
-
-  // încarcă modelul .task
   useEffect(() => {
     async function loadGestureRecognizer() {
       try {
         const modelPath =
           process.env.REACT_APP_TRAINED_MODEL_PATH ||
           process.env.REACT_APP_FIREBASE_STORAGE_TRAINED_MODEL_15_11_2025;
-
-        console.log("MODEL PATH =", modelPath);
 
         if (!modelPath) {
           throw new Error(
@@ -267,15 +213,12 @@ const Detect = () => {
         );
 
         const recognizer = await GestureRecognizer.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath: modelPath,
-          },
+          baseOptions: { modelAssetPath: modelPath },
           numHands: 2,
           runningMode: runningMode,
         });
 
         setGestureRecognizer(recognizer);
-        console.log("Gesture recognizer loaded ✅");
       } catch (e) {
         console.error("Failed to load gesture recognizer ❌", e);
       }
@@ -287,109 +230,65 @@ const Detect = () => {
   const modeLabel = mode === "translate" ? "TRANSLATE MODE" : "PRACTICE MODE";
 
   return (
-    <>
-      <div className="signlang_detection-container">
-        {accessToken ? (
-          <>
-            <div style={{ position: "relative" }}>
-              {/* butoanele de mod + label */}
-              <div className="signlang_mode-header">
-                <div className="signlang_mode-switch">
-                  <button
-                    type="button"
-                    className={
-                      mode === "translate"
-                        ? "signlang_mode-btn active"
-                        : "signlang_mode-btn"
-                    }
-                    onClick={() => navigate("/detect")}
-                  >
-                    Translate
-                  </button>
-                  <button
-                    type="button"
-                    className={
-                      mode === "practice"
-                        ? "signlang_mode-btn active"
-                        : "signlang_mode-btn"
-                    }
-                    onClick={() => navigate("/practice")}
-                  >
-                    Practice
-                  </button>
-                </div>
-
-                <div
-                  className={`signlang_mode-label ${
-                    mode === "practice" ? "practice" : "translate"
-                  }`}
-                >
-                  <span>{modeLabel}</span>
-                </div>
-              </div>
-
-              <Webcam
-                audio={false}
-                ref={webcamRef}
-                className="signlang_webcam"
-              />
-
-              <canvas ref={canvasRef} className="signlang_canvas" />
-
-              <div className="signlang_data-container">
-                <button onClick={enableCam}>
-                  {webcamRunning ? "Stop" : "Start"}
-                </button>
-
-                <div className="signlang_data">
-                  {/* în ambele moduri arătăm semnul curent */}
-                  <p className="gesture_output">
-                    {gestureOutput
-                      ? `Recognized sign: ${gestureOutput}`
-                      : "No sign detected yet."}
-                  </p>
-
-                  {progress ? <ProgressBar progress={progress} /> : null}
-                </div>
+    <div className="signlang_detection-container">
+      {accessToken ? (
+        <>
+          <div style={{ position: "relative" }}>
+            <div className="signlang_mode-header">
+              <div className="signlang_mode-label">
+                <span>{modeLabel}</span>
               </div>
             </div>
 
-            {/* panoul de practică doar în mode === "practice" */}
-            {mode === "practice" && (
-              <div className="signlang_imagelist-container">
-                <h2 className="gradient__text">Practice sign</h2>
+            <Webcam audio={false} ref={webcamRef} className="signlang_webcam" />
+            <canvas ref={canvasRef} className="signlang_canvas" />
 
-                <div className="signlang_image-div">
-                  {currentImage ? (
-                    <>
-                      <img
-                        src={currentImage.url}
-                        alt={`img ${currentImage.id}`}
-                      />
-                      <p>Try to perform the sign shown in the image.</p>
-                    </>
-                  ) : (
-                    <h3 className="gradient__text">
-                      Click on Start to practice with images.
-                    </h3>
-                  )}
-                </div>
+            <div className="signlang_data-container">
+              <button onClick={enableCam}>{webcamRunning ? "Stop" : "Start"}</button>
+
+              <div className="signlang_data">
+                <p className="gesture_output">
+                  {gestureOutput
+                    ? `Recognized sign: ${gestureOutput}`
+                    : "No sign detected yet."}
+                </p>
+
+                {progress ? <ProgressBar progress={progress} /> : null}
               </div>
-            )}
-          </>
-        ) : (
-          <div className="signlang_detection_notLoggedIn">
-            <h1 className="gradient__text">Please Login !</h1>
-            <img src={DisplayImg} alt="diplay-img" />
-            <p>
-              We save your detection data to show your progress and learning in
-              the dashboard, so please login to test this detection feature.
-            </p>
+            </div>
           </div>
-        )}
-      </div>
-    </>
+
+          {mode === "practice" && (
+            <div className="signlang_imagelist-container">
+              <h2 className="gradient__text">Practice sign</h2>
+
+              <div className="signlang_image-div">
+                {currentImage ? (
+                  <>
+                    <img src={currentImage.url} alt={`img ${currentImage.id}`} />
+                    <p>Try to perform the sign shown in the image.</p>
+                  </>
+                ) : (
+                  <h3 className="gradient__text">
+                    Click on Start to practice with images.
+                  </h3>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="signlang_detection_notLoggedIn">
+          <h1 className="gradient__text">Please Login !</h1>
+          <img src={DisplayImg} alt="diplay-img" />
+          <p>
+            We save your detection data to show your progress and learning in the
+            dashboard, so please login to test this detection feature.
+          </p>
+        </div>
+      )}
+    </div>
   );
 };
 
-export default Detect;
+export default DetectCore;

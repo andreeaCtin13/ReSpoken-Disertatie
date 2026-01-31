@@ -171,6 +171,21 @@
   cursor: pointer;
 }
 
+.signlang_mode-label.translate {
+  border: 1px solid #ddd;
+  opacity: 0.85;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.signlang_mode-label.practice {
+  border: 1px solid #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
 @media screen and (max-width: 1080px) {
   .signlang_webcam {
     width: 550px;

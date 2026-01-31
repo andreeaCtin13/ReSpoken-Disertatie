@@ -1,7 +1,7 @@
 // src/components/navbar/Navbar.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./Navbar.css";
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import logo from "../../assests/logo2.png";
 import { RiMenu3Line, RiCloseLine } from "react-icons/ri";
 import { useDispatch, useSelector } from "react-redux";
@@ -17,7 +17,6 @@ const Navbar = ({ notifyMsg }) => {
 
   const isLoggedIn = useMemo(() => !!accessToken && !!user, [accessToken, user]);
 
-  // ca să nu dea toast de “Welcome” de 2 ori în dev
   const welcomedRef = useRef(false);
 
   useEffect(() => {
@@ -31,7 +30,6 @@ const Navbar = ({ notifyMsg }) => {
     }
   }, [isLoggedIn, user, notifyMsg]);
 
-  // optional: dacă vrei să arăți eroarea în toast
   useEffect(() => {
     if (error && error !== "Login cancelled.") {
       notifyMsg?.("error", error);
@@ -48,6 +46,8 @@ const Navbar = ({ notifyMsg }) => {
     notifyMsg?.("success", "Logged Out Successfully !");
   };
 
+  const navClass = ({ isActive }) => (isActive ? "nav_active" : undefined);
+
   return (
     <div className="signlang_navbar gradient__bg">
       <div className="singlang_navlinks">
@@ -59,16 +59,28 @@ const Navbar = ({ notifyMsg }) => {
 
         <div className="signlang_navlinks_container">
           <p>
-            <Link to="/">Home</Link>
+            <NavLink to="/" className={navClass}>
+              Home
+            </NavLink>
           </p>
 
           <p>
-            <Link to="/detect">Detect</Link>
+            <NavLink to="/detect" className={navClass}>
+              Detect
+            </NavLink>
+          </p>
+
+          <p>
+            <NavLink to="/practice" className={navClass}>
+              Practice
+            </NavLink>
           </p>
 
           {accessToken && (
             <p>
-              <Link to="/dashboard">Dashboard</Link>
+              <NavLink to="/dashboard" className={navClass}>
+                Dashboard
+              </NavLink>
             </p>
           )}
         </div>
@@ -96,11 +108,7 @@ const Navbar = ({ notifyMsg }) => {
 
       <div className="signlang__navbar-menu">
         {toggle ? (
-          <RiCloseLine
-            color="#fff"
-            size={27}
-            onClick={() => setToggle(false)}
-          />
+          <RiCloseLine color="#fff" size={27} onClick={() => setToggle(false)} />
         ) : (
           <RiMenu3Line color="#fff" size={27} onClick={() => setToggle(true)} />
         )}
@@ -109,16 +117,28 @@ const Navbar = ({ notifyMsg }) => {
           <div className="signlang__navbar-menu_container scale-up-center">
             <div className="signlang__navbar-menu_container-links">
               <p>
-                <Link to="/">Home</Link>
+                <Link to="/" onClick={() => setToggle(false)}>
+                  Home
+                </Link>
               </p>
 
               <p>
-                <Link to="/detect">Detect</Link>
+                <Link to="/detect" onClick={() => setToggle(false)}>
+                  Detect
+                </Link>
+              </p>
+
+              <p>
+                <Link to="/practice" onClick={() => setToggle(false)}>
+                  Practice
+                </Link>
               </p>
 
               {accessToken && (
                 <p>
-                  <Link to="/dashboard">Dashboard</Link>
+                  <Link to="/dashboard" onClick={() => setToggle(false)}>
+                    Dashboard
+                  </Link>
                 </p>
               )}
             </div>
