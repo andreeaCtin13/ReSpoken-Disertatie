@@ -1,5 +1,5 @@
 // src/components/navbar/Navbar.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./Navbar.css";
 import { Link } from "react-router-dom";
 import logo from "../../assests/logo2.png";
@@ -9,31 +9,47 @@ import { login, logout } from "../../redux/actions/authaction";
 
 const Navbar = ({ notifyMsg }) => {
   const [toggle, setToggle] = useState(false);
-
-  const { user, accessToken } = useSelector((state) => state.auth);
-
   const dispatch = useDispatch();
 
+  const { user, accessToken, loading, error } = useSelector(
+    (state) => state.auth
+  );
+
+  const isLoggedIn = useMemo(() => !!accessToken && !!user, [accessToken, user]);
+
+  // ca să nu dea toast de “Welcome” de 2 ori în dev
+  const welcomedRef = useRef(false);
+
   useEffect(() => {
-    if (accessToken && user) {
-      notifyMsg(
-        "success",
-        `Welcome! ${user?.name}, You Logged in Successfully`
-      );
+    if (isLoggedIn && !welcomedRef.current) {
+      welcomedRef.current = true;
+      notifyMsg?.("success", `Welcome! ${user?.name}, You Logged in Successfully`);
     }
-  }, [accessToken, user, notifyMsg]);
+
+    if (!isLoggedIn) {
+      welcomedRef.current = false;
+    }
+  }, [isLoggedIn, user, notifyMsg]);
+
+  // optional: dacă vrei să arăți eroarea în toast
+  useEffect(() => {
+    if (error && error !== "Login cancelled.") {
+      notifyMsg?.("error", error);
+    }
+  }, [error, notifyMsg]);
 
   const handleLogin = () => {
+    if (loading) return;
     dispatch(login());
   };
 
   const handleLogout = () => {
     dispatch(logout());
-    notifyMsg("success", "Logged Out Successfully !");
+    notifyMsg?.("success", "Logged Out Successfully !");
   };
 
   return (
-    <div className="signlang_navbar  gradient__bg">
+    <div className="signlang_navbar gradient__bg">
       <div className="singlang_navlinks">
         <div className="signlang_navlinks_logo">
           <a href="/">
@@ -66,8 +82,13 @@ const Navbar = ({ notifyMsg }) => {
               </button>
             </>
           ) : (
-            <button type="button" onClick={handleLogin}>
-              Login
+            <button
+              type="button"
+              onClick={handleLogin}
+              disabled={!!loading}
+              style={loading ? { opacity: 0.7, cursor: "not-allowed" } : undefined}
+            >
+              {loading ? "Logging in..." : "Login"}
             </button>
           )}
         </div>
@@ -83,6 +104,7 @@ const Navbar = ({ notifyMsg }) => {
         ) : (
           <RiMenu3Line color="#fff" size={27} onClick={() => setToggle(true)} />
         )}
+
         {toggle && (
           <div className="signlang__navbar-menu_container scale-up-center">
             <div className="signlang__navbar-menu_container-links">
@@ -110,8 +132,15 @@ const Navbar = ({ notifyMsg }) => {
                   </button>
                 </>
               ) : (
-                <button type="button" onClick={handleLogin}>
-                  Login
+                <button
+                  type="button"
+                  onClick={handleLogin}
+                  disabled={!!loading}
+                  style={
+                    loading ? { opacity: 0.7, cursor: "not-allowed" } : undefined
+                  }
+                >
+                  {loading ? "Logging in..." : "Login"}
                 </button>
               )}
             </div>
