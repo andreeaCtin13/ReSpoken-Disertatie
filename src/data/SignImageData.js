@@ -23,6 +23,7 @@ import VImg from "../assests/SignImages/V.png";
 import WImg from "../assests/SignImages/W.png";
 import XImg from "../assests/SignImages/X.png";
 import YImg from "../assests/SignImages/Y.png";
+
 import ByeImg from "../assests/SignImages/BYE.png";
 import HelloImg from "../assests/SignImages/HELLO.png";
 import YesImg from "../assests/SignImages/YES.png";
@@ -41,168 +42,48 @@ import OkImg from "../assests/SignImages/OK.png";
 import NotOkImg from "../assests/SignImages/NOTOK.png";
 
 export const SignImageData = [
-  {
-    name: "A",
-    url: AImg,
-  },
-  {
-    name: "B",
-    url: BImg,
-  },
-  {
-    name: "C",
-    url: CImg,
-  },
-  {
-    name: "D",
-    url: DImg,
-  },
-  {
-    name: "E",
-    url: EImg,
-  },
-  {
-    name: "F",
-    url: FImg,
-  },
-  {
-    name: "G",
-    url: GImg,
-  },
-  {
-    name: "H",
-    url: HImg,
-  },
-  {
-    name: "I",
-    url: IImg,
-  },
-  {
-    name: "J",
-    url: JImg,
-  },
-  {
-    name: "K",
-    url: KImg,
-  },
-  {
-    name: "L",
-    url: LImg,
-  },
-  {
-    name: "M",
-    url: MImg,
-  },
-  {
-    name: "N",
-    url: NImg,
-  },
-  {
-    name: "O",
-    url: OImg,
-  },
-  {
-    name: "P",
-    url: PImg,
-  },
-  {
-    name: "Q",
-    url: QImg,
-  },
-  {
-    name: "R",
-    url: RImg,
-  },
-  {
-    name: "S",
-    url: SImg,
-  },
-  {
-    name: "T",
-    url: TImg,
-  },
-  {
-    name: "U",
-    url: UImg,
-  },
-  {
-    name: "V",
-    url: VImg,
-  },
-  {
-    name: "W",
-    url: WImg,
-  },
-  {
-    name: "X",
-    url: XImg,
-  },
-  {
-    name: "Y",
-    url: YImg,
-  },
-  {
-    name: "Bye",
-    url: ByeImg,
-  },
-  {
-    name: "Hello",
-    url: HelloImg,
-  },
-  {
-    name: "Meet",
-    url: MeetImg,
-  },
-  {
-    name: "ThankYou",
-    url: ThankYouImg,
-  },
-  {
-    name: "Yes",
-    url: YesImg,
-  },
-  {
-    name: "No",
-    url: NoImg,
-  },
-  {
-    name: "Deaf",
-    url: DeafImg,
-  },
-  {
-    name: "Tell",
-    url: TellImg,
-  },
-  {
-    name: "Please",
-    url: PleaseImg,
-  },
-  {
-    name: "Me",
-    url: MeImg,
-  },
-  {
-    name: "ILoveYou",
-    url: ILoveYouImg,
-  },
-  {
-    name: "Learn",
-    url: LearnImg,
-  },
-  {
-    name: "Pen",
-    url: PenImg,
-  },
-  {
-    name: "Name",
-    url: NameImg,
-  },
-  {
-    name: "Ok",
-    url: OkImg,
-  },
-  {
-    name: "NotOk",
-    url: NotOkImg,
-  },
+  // ===== ALPHABET =====
+  { id: 1, sign: "A", url: AImg },
+  { id: 2, sign: "B", url: BImg },
+  { id: 3, sign: "C", url: CImg },
+  { id: 4, sign: "D", url: DImg },
+  { id: 5, sign: "E", url: EImg },
+  { id: 6, sign: "F", url: FImg },
+  { id: 7, sign: "G", url: GImg },
+  { id: 8, sign: "H", url: HImg },
+  { id: 9, sign: "I", url: IImg },
+  { id: 10, sign: "J", url: JImg },
+  { id: 11, sign: "K", url: KImg },
+  { id: 12, sign: "L", url: LImg },
+  { id: 13, sign: "M", url: MImg },
+  { id: 14, sign: "N", url: NImg },
+  { id: 15, sign: "O", url: OImg },
+  { id: 16, sign: "P", url: PImg },
+  { id: 17, sign: "Q", url: QImg },
+  { id: 18, sign: "R", url: RImg },
+  { id: 19, sign: "S", url: SImg },
+  { id: 20, sign: "T", url: TImg },
+  { id: 21, sign: "U", url: UImg },
+  { id: 22, sign: "V", url: VImg },
+  { id: 23, sign: "W", url: WImg },
+  { id: 24, sign: "X", url: XImg },
+  { id: 25, sign: "Y", url: YImg },
+
+  // ===== WORDS / PHRASES =====
+  { id: 26, sign: "BYE", url: ByeImg },
+  { id: 27, sign: "HELLO", url: HelloImg },
+  { id: 28, sign: "MEET", url: MeetImg },
+  { id: 29, sign: "THANKYOU", url: ThankYouImg }, // ⚠️ exact cum e în model
+  { id: 30, sign: "YES", url: YesImg },
+  { id: 31, sign: "NO", url: NoImg },
+  { id: 32, sign: "DEAF", url: DeafImg },
+  { id: 33, sign: "TELL", url: TellImg },
+  { id: 34, sign: "PLEASE", url: PleaseImg },
+  { id: 35, sign: "ME", url: MeImg },
+  { id: 36, sign: "ILOVEYOU", url: ILoveYouImg },
+  { id: 37, sign: "LEARN", url: LearnImg },
+  { id: 38, sign: "PEN", url: PenImg },
+  { id: 39, sign: "NAME", url: NameImg },
+  { id: 40, sign: "OK", url: OkImg },
+  { id: 41, sign: "NOTOK", url: NotOkImg },
 ];

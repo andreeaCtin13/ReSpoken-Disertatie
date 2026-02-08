@@ -1,8 +1,7 @@
-// src/components/navbar/Navbar.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./Navbar.css";
 import { Link, NavLink } from "react-router-dom";
-import logo from "../../assests/logo2.png";
+import logo from "../../assests/logo.png";
 import { RiMenu3Line, RiCloseLine } from "react-icons/ri";
 import { useDispatch, useSelector } from "react-redux";
 import { login, logout } from "../../redux/actions/authaction";
@@ -16,7 +15,6 @@ const Navbar = ({ notifyMsg }) => {
   );
 
   const isLoggedIn = useMemo(() => !!accessToken && !!user, [accessToken, user]);
-
   const welcomedRef = useRef(false);
 
   useEffect(() => {
@@ -49,53 +47,53 @@ const Navbar = ({ notifyMsg }) => {
   const navClass = ({ isActive }) => (isActive ? "nav_active" : undefined);
 
   return (
-    <div className="signlang_navbar gradient__bg">
+    <nav className="signlang_navbar gradient__bg">
       <div className="singlang_navlinks">
+        {/* LOGO */}
         <div className="signlang_navlinks_logo">
-          <a href="/">
+          <Link to="/home">
             <img className="logo" src={logo} alt="logo" />
-          </a>
+          </Link>
         </div>
 
+        {/* DESKTOP LINKS */}
         <div className="signlang_navlinks_container">
           <p>
-            <NavLink to="/" className={navClass}>
+            <NavLink to="/home" className={navClass}>
               Home
             </NavLink>
           </p>
 
-          <p>
-            <NavLink to="/detect" className={navClass}>
-              Detect
-            </NavLink>
-          </p>
-
-          <p>
-            <NavLink to="/practice" className={navClass}>
-              Practice
-            </NavLink>
-          </p>
-
-          {accessToken && (
-            <p>
-              <NavLink to="/dashboard" className={navClass}>
-                Dashboard
-              </NavLink>
-            </p>
+          {isLoggedIn && (
+            <>
+              <p>
+                <NavLink to="/detect" className={navClass}>
+                  Detect
+                </NavLink>
+              </p>
+              <p>
+                <NavLink to="/practice" className={navClass}>
+                  Practice
+                </NavLink>
+              </p>
+              <p>
+                <NavLink to="/dashboard" className={navClass}>
+                  Dashboard
+                </NavLink>
+              </p>
+            </>
           )}
         </div>
 
+        {/* AUTH */}
         <div className="signlang_auth-data">
-          {accessToken ? (
+          {isLoggedIn ? (
             <>
               <img src={user?.photoURL} alt="user-icon" />
-              <button type="button" onClick={handleLogout}>
-                Logout
-              </button>
+              <button onClick={handleLogout}>Logout</button>
             </>
           ) : (
             <button
-              type="button"
               onClick={handleLogin}
               disabled={!!loading}
               style={loading ? { opacity: 0.7, cursor: "not-allowed" } : undefined}
@@ -106,59 +104,54 @@ const Navbar = ({ notifyMsg }) => {
         </div>
       </div>
 
+      {/* MOBILE MENU */}
       <div className="signlang__navbar-menu">
         {toggle ? (
-          <RiCloseLine color="#fff" size={27} onClick={() => setToggle(false)} />
+          <RiCloseLine size={27} onClick={() => setToggle(false)} />
         ) : (
-          <RiMenu3Line color="#fff" size={27} onClick={() => setToggle(true)} />
+          <RiMenu3Line size={27} onClick={() => setToggle(true)} />
         )}
 
         {toggle && (
           <div className="signlang__navbar-menu_container scale-up-center">
             <div className="signlang__navbar-menu_container-links">
               <p>
-                <Link to="/" onClick={() => setToggle(false)}>
+                <Link to="/home" onClick={() => setToggle(false)}>
                   Home
                 </Link>
               </p>
 
-              <p>
-                <Link to="/detect" onClick={() => setToggle(false)}>
-                  Detect
-                </Link>
-              </p>
-
-              <p>
-                <Link to="/practice" onClick={() => setToggle(false)}>
-                  Practice
-                </Link>
-              </p>
-
-              {accessToken && (
-                <p>
-                  <Link to="/dashboard" onClick={() => setToggle(false)}>
-                    Dashboard
-                  </Link>
-                </p>
+              {isLoggedIn && (
+                <>
+                  <p>
+                    <Link to="/detect" onClick={() => setToggle(false)}>
+                      Detect
+                    </Link>
+                  </p>
+                  <p>
+                    <Link to="/practice" onClick={() => setToggle(false)}>
+                      Practice
+                    </Link>
+                  </p>
+                  <p>
+                    <Link to="/dashboard" onClick={() => setToggle(false)}>
+                      Dashboard
+                    </Link>
+                  </p>
+                </>
               )}
             </div>
 
             <div className="signlang__navbar-menu_container-links-authdata">
-              {accessToken ? (
+              {isLoggedIn ? (
                 <>
                   <img src={user?.photoURL} alt="user-icon" />
-                  <button type="button" onClick={handleLogout}>
-                    Logout
-                  </button>
+                  <button onClick={handleLogout}>Logout</button>
                 </>
               ) : (
                 <button
-                  type="button"
                   onClick={handleLogin}
                   disabled={!!loading}
-                  style={
-                    loading ? { opacity: 0.7, cursor: "not-allowed" } : undefined
-                  }
                 >
                   {loading ? "Logging in..." : "Login"}
                 </button>
@@ -167,7 +160,7 @@ const Navbar = ({ notifyMsg }) => {
           </div>
         )}
       </div>
-    </div>
+    </nav>
   );
 };
 

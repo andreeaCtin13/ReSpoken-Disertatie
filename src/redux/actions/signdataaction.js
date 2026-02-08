@@ -1,171 +1,187 @@
-import { db } from "../../firebase";
-
+import { getAuth } from "firebase/auth";
 import {
   collection,
-  getDocs,
+  addDoc,
   doc,
-  setDoc,
-  where,
+  getDocs,
   query,
+  where,
+  orderBy,
+  limit,
+  serverTimestamp,
+  setDoc,
+  getDoc,
+  updateDoc,
+  increment,
 } from "firebase/firestore";
 
-import {
-  ADD_SIGN_DATA_FAIL,
-  ADD_SIGN_DATA_REQ,
-  ADD_SIGN_DATA_SUCCESS,
-  GET_SIGN_DATA_FAIL,
-  GET_SIGN_DATA_REQ,
-  GET_SIGN_DATA_SUCCESS,
-  GET_TOP_USERS_FAIL,
-  GET_TOP_USERS_REQ,
-  GET_TOP_USERS_SUCCESS,
-} from "../action-types";
-import Cookies from "js-cookie";
+import { db } from "../../firebase"; // <-- SCHIMBĂ dacă ai alt path
 
-export const getSignData = () => async (dispatch) => {
-  let signData = [];
+export const ADD_SIGNDATA_REQUEST = "ADD_SIGNDATA_REQUEST";
+export const ADD_SIGNDATA_SUCCESS = "ADD_SIGNDATA_SUCCESS";
+export const ADD_SIGNDATA_FAIL = "ADD_SIGNDATA_FAIL";
 
-  const logedInUser = await JSON.parse(Cookies.get("sign-language-ai-user"));
+export const GET_SIGNDATA_REQUEST = "GET_SIGNDATA_REQUEST";
+export const GET_SIGNDATA_SUCCESS = "GET_SIGNDATA_SUCCESS";
+export const GET_SIGNDATA_FAIL = "GET_SIGNDATA_FAIL";
 
-  async function getData(db) {
-    const noteCol = collection(db, "SignData");
+export const GET_TOPUSERS_REQUEST = "GET_TOPUSERS_REQUEST";
+export const GET_TOPUSERS_SUCCESS = "GET_TOPUSERS_SUCCESS";
+export const GET_TOPUSERS_FAIL = "GET_TOPUSERS_FAIL";
 
-    const UserSpecificData = query(
-      noteCol,
-      where("userId", "==", logedInUser.userId)
-    );
+// ---------- helpers ----------
+async function ensureUserDoc({ uid, username, photoURL }) {
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
 
-    const noteSnapshot = await getDocs(UserSpecificData);
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      uid,
+      username: username || "Unknown",
+      photoURL: photoURL || "",
+      createdAt: serverTimestamp(),
+      totalPoints: 0,
+      practiceAttempts: 0,
+      practiceMatches: 0,
+    });
+  }
+}
 
-    const Data = noteSnapshot.docs.map((doc) => doc.data());
+function getUidAndProfile(getState) {
+  const authFirebase = getAuth();
+  const firebaseUser = authFirebase.currentUser;
 
-    return Data;
+  if (!firebaseUser) {
+    console.error("❌ Firebase Auth currentUser is NULL (not logged in?)");
+    return { uid: null, username: null, photoURL: null };
   }
 
+  const state = getState?.();
+  const reduxUser = state?.auth?.user;
+
+  const uid = firebaseUser.uid;
+  const username = reduxUser?.name || firebaseUser.displayName || "Unknown";
+  const photoURL = reduxUser?.photoURL || firebaseUser.photoURL || "";
+
+  return { uid, username, photoURL };
+}
+
+// ---------- actions ----------
+export const addSignData = (data) => async (dispatch, getState) => {
   try {
-    dispatch({
-      type: GET_SIGN_DATA_REQ,
-    });
+    dispatch({ type: ADD_SIGNDATA_REQUEST });
 
-    signData = await getData(db);
+    const { uid, username, photoURL } = getUidAndProfile(getState);
+    if (!uid) throw new Error("No UID - user not logged in");
 
-    dispatch({
-      type: GET_SIGN_DATA_SUCCESS,
-      payload: signData,
-    });
-  } catch (error) {
-    dispatch({
-      type: GET_SIGN_DATA_FAIL,
-      payload:
-        error.response && error.response.data.message
-          ? error.response.data.message
-          : error.message,
-    });
+    await ensureUserDoc({ uid, username, photoURL });
+
+    const payload = {
+      ...data,
+      userId: uid,
+      username: username || data.username || "Unknown",
+      createdAt: serverTimestamp(),
+    };
+
+    await addDoc(collection(db, "sessions"), payload);
+
+    console.log("✅ Firestore write OK: sessions", payload);
+
+    dispatch({ type: ADD_SIGNDATA_SUCCESS });
+  } catch (err) {
+    console.error("❌ addSignData failed:", err);
+    dispatch({ type: ADD_SIGNDATA_FAIL, payload: err?.message || String(err) });
   }
 };
-
-export const addSignData = (data) => async (dispatch) => {
+export const getSignData = () => async (dispatch, getState) => {
   try {
-    dispatch({
-      type: ADD_SIGN_DATA_REQ,
+    dispatch({ type: GET_SIGNDATA_REQUEST });
+
+    const { uid } = getUidAndProfile(getState);
+    if (!uid) throw new Error("No UID - user not logged in");
+
+    // ✅ no orderBy => no composite index needed
+    const q = query(
+      collection(db, "sessions"),
+      where("userId", "==", uid),
+      limit(200),
+    );
+
+    const snap = await getDocs(q);
+    const items = snap.docs.map((d) => ({ _docId: d.id, ...d.data() }));
+
+    // sort in JS instead of Firestore
+    items.sort((a, b) => {
+      const ta = a.createdAt?.seconds ? a.createdAt.seconds : 0;
+      const tb = b.createdAt?.seconds ? b.createdAt.seconds : 0;
+      return tb - ta;
     });
 
-    await setDoc(doc(db, "SignData", data.id), {
-      userId: data.userId,
-      id: data.id,
-      username: data.username,
-      createdAt: data.createdAt,
-      signsPerformed: data.signsPerformed,
-      secondsSpent: data.secondsSpent,
-    });
-
-    dispatch({
-      type: ADD_SIGN_DATA_SUCCESS,
-      payload: data,
-    });
-  } catch (error) {
-    dispatch({
-      type: ADD_SIGN_DATA_FAIL,
-      payload:
-        error.response && error.response.data.message
-          ? error.response.data.message
-          : error.message,
-    });
+    dispatch({ type: GET_SIGNDATA_SUCCESS, payload: items });
+  } catch (err) {
+    console.error("❌ getSignData failed:", err);
+    dispatch({ type: GET_SIGNDATA_FAIL, payload: err?.message || String(err) });
   }
 };
 
 export const getTopUsers = () => async (dispatch) => {
-  let allData = [];
-
-  async function getData(db) {
-    const noteCol = collection(db, "SignData");
-
-    const noteSnapshot = await getDocs(noteCol);
-
-    const Data = noteSnapshot.docs.map((doc) => doc.data());
-
-    return Data;
-  }
-
   try {
-    dispatch({
-      type: GET_TOP_USERS_REQ,
-    });
+    dispatch({ type: GET_TOPUSERS_REQUEST });
 
-    allData = await getData(db);
-
-    // group data by username
-    const groupedData = allData.reduce((acc, curr) => {
-      if (!acc[curr.username]) {
-        acc[curr.username] = [];
-      }
-      acc[curr.username].push(curr);
-      return acc;
-    }, {});
-
-    
-    // get maximum count object for each group
-    let uniqueData = Object.values(groupedData).map((group) => {
-      return group.reduce((maxObj, obj) => {
-        return obj.signsPerformed.reduce((acc, curr) => acc + curr.count, 0) >
-          maxObj.signsPerformed.reduce((acc, curr) => acc + curr.count, 0)
-          ? obj
-          : maxObj;
-      });
-    });
-
-    uniqueData.sort(
-      (a, b) =>
-        b.signsPerformed.reduce((acc, curr) => acc + curr.count, 0) -
-        a.signsPerformed.reduce((acc, curr) => acc + curr.count, 0)
+    const q = query(
+      collection(db, "users"),
+      orderBy("totalPoints", "desc"),
+      limit(10),
     );
- 
-    
-    uniqueData = uniqueData.slice(0, 3);
 
-    // add rank property to each object
-    uniqueData.forEach((obj, index) => {
-      obj.rank = index + 1;
+    const snap = await getDocs(q);
+    const users = snap.docs.map((d, idx) => {
+      const u = d.data();
+      return {
+        rank: idx + 1,
+        username: u.username || "Unknown",
+        totalPoints: u.totalPoints || 0,
+        photoURL: u.photoURL || "",
+      };
     });
 
-    // create new array with only name and rank properties
-    const dataForRankBoard = uniqueData.map((obj) => ({
-      username: obj.username,
-      rank: obj.rank,
-    }));
+    console.log("✅ Firestore read OK: topUsers count =", users.length);
 
-    dispatch({
-      type: GET_TOP_USERS_SUCCESS,
-      payload: dataForRankBoard,
-    });
-    
-  } catch (error) {
-    dispatch({
-      type: GET_TOP_USERS_FAIL,
-      payload:
-        error.response && error.response.data.message
-          ? error.response.data.message
-          : error.message,
-    });
+    dispatch({ type: GET_TOPUSERS_SUCCESS, payload: users });
+  } catch (err) {
+    console.error("❌ getTopUsers failed:", err);
+    dispatch({ type: GET_TOPUSERS_FAIL, payload: err?.message || String(err) });
   }
 };
+
+export const savePracticeAttempt =
+  ({ targetSign, detectedSign, score, matched, points }) =>
+  async (dispatch, getState) => {
+    try {
+      const { uid, username, photoURL } = getUidAndProfile(getState);
+      if (!uid) return;
+
+      await ensureUserDoc({ uid, username, photoURL });
+
+      await addDoc(collection(db, "practice_attempts"), {
+        userId: uid,
+        username,
+        targetSign,
+        detectedSign,
+        score,
+        matched: !!matched,
+        points: Number(points) || 0,
+        createdAt: serverTimestamp(),
+      });
+
+      await updateDoc(doc(db, "users", uid), {
+        totalPoints: increment(Number(points) || 0),
+        practiceAttempts: increment(1),
+        practiceMatches: increment(matched ? 1 : 0),
+      });
+
+      console.log("✅ Firestore write OK: practice_attempts + users update");
+    } catch (err) {
+      console.error("❌ savePracticeAttempt failed:", err);
+    }
+  };

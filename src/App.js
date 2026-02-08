@@ -2,8 +2,8 @@ import { Route, Routes } from "react-router-dom";
 import "./App.css";
 import { Navbar, Footer, Home, NotFound, Dashboard } from "./components";
 
-import DetectTranslatePage from "./pages/DetectTranslatePage";
-import DetectPracticePage from "./pages/DetectPracticePage";
+import DetectTranslatePage from "./pages/Detect/DetectTranslatePage";
+import DetectPracticePage from "./pages/Detect/DetectPracticePage";
 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -33,7 +33,7 @@ function App() {
     <div className="App">
       <Routes>
         <Route
-          path="/"
+          path="/home"
           element={
             <Layout notifyMsg={notifyMsg}>
               <Home />
