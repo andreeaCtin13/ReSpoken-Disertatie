@@ -1,108 +1,36 @@
 import {
-  ADD_SIGN_DATA_FAIL,
-  ADD_SIGN_DATA_REQ,
-  ADD_SIGN_DATA_SUCCESS,
-  GET_SIGN_DATA_FAIL,
-  GET_SIGN_DATA_REQ,
-  GET_SIGN_DATA_SUCCESS,
-  GET_TOP_USERS_FAIL,
-  GET_TOP_USERS_REQ,
-  GET_TOP_USERS_SUCCESS,
-} from "../action-types";
+  SIGNDATA_LOADING,
+  SIGNDATA_SUCCESS,
+  SIGNDATA_FAIL,
+  TOPUSERS_SUCCESS,
+  TOPUSERS_FAIL,
+} from "../actions/signdataaction";
 
 const initialState = {
+  loading: false,
   signDataList: [],
-  loading: false,
-};
+  error: null,
 
-
-export const SignReducer = (state = initialState, action) => {
-
-  const { type, payload } = action;
-
-  switch (type) {
-    case GET_SIGN_DATA_REQ: {
-      return {
-        ...state,
-        loading: true,
-      };
-    }
-
-    case GET_SIGN_DATA_SUCCESS: {
-      return {
-        ...state,
-        signDataList: payload,
-        loading: false,
-      };
-    }
-
-    case GET_SIGN_DATA_FAIL: {
-      return {
-        ...state,
-        loading: false,
-        error: payload,
-      };
-    }
-
-    case ADD_SIGN_DATA_REQ: {
-      return {
-        ...state,
-        loading: true,
-      };
-    }
-
-    case ADD_SIGN_DATA_SUCCESS: {
-      return {
-        ...state,
-        loading: false,
-      };
-    }
-
-    case ADD_SIGN_DATA_FAIL: {
-      return {
-        ...state,
-        loading: false,
-        error: payload,
-      };
-    }
-
-    default:
-      return state;
-  }
-};
-
-
-export const TopSignUsersReducer = (state = {
-  loading: false,
   topUsers: [],
-}, action) => {
+  topUsersError: null,
+};
 
-  const { type, payload } = action;
+export default function signReducer(state = initialState, action) {
+  switch (action.type) {
+    case SIGNDATA_LOADING:
+      return { ...state, loading: true, error: null };
 
-  switch (type) {
-    
-    case GET_TOP_USERS_REQ: {
-      return {
-        ...state,
-        loading: true,
-      };
-    }
+    case SIGNDATA_SUCCESS:
+      return { ...state, loading: false, signDataList: action.payload || [], error: null };
 
-    case GET_TOP_USERS_SUCCESS: {
-      return {
-        ...state,
-        topUsers: payload,
-        loading: false,
-      };
-    }
+    case SIGNDATA_FAIL:
+      return { ...state, loading: false, error: action.payload };
 
-    case GET_TOP_USERS_FAIL: {
-      return {
-        ...state,
-        loading: false,
-        error: payload,
-      };
-    }
+    case TOPUSERS_SUCCESS:
+      return { ...state, topUsers: action.payload || [], topUsersError: null };
+
+    case TOPUSERS_FAIL:
+      return { ...state, topUsersError: action.payload };
 
     default:
       return state;

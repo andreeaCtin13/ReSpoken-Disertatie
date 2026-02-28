@@ -1,187 +1,176 @@
-import { getAuth } from "firebase/auth";
+// src/redux/actions/signdataaction.js
+
+import { db } from "../../firebase";
 import {
   collection,
   addDoc,
-  doc,
   getDocs,
   query,
   where,
   orderBy,
   limit,
-  serverTimestamp,
+  doc,
   setDoc,
-  getDoc,
   updateDoc,
+  serverTimestamp,
   increment,
 } from "firebase/firestore";
 
-import { db } from "../../firebase"; // <-- SCHIMBĂ dacă ai alt path
+// ===================
+// ACTION TYPES
+// ===================
+export const SIGNDATA_LOADING = "SIGNDATA_LOADING";
+export const SIGNDATA_SUCCESS = "SIGNDATA_SUCCESS";
+export const SIGNDATA_FAIL = "SIGNDATA_FAIL";
 
-export const ADD_SIGNDATA_REQUEST = "ADD_SIGNDATA_REQUEST";
-export const ADD_SIGNDATA_SUCCESS = "ADD_SIGNDATA_SUCCESS";
-export const ADD_SIGNDATA_FAIL = "ADD_SIGNDATA_FAIL";
+export const TOPUSERS_SUCCESS = "TOPUSERS_SUCCESS";
+export const TOPUSERS_FAIL = "TOPUSERS_FAIL";
 
-export const GET_SIGNDATA_REQUEST = "GET_SIGNDATA_REQUEST";
-export const GET_SIGNDATA_SUCCESS = "GET_SIGNDATA_SUCCESS";
-export const GET_SIGNDATA_FAIL = "GET_SIGNDATA_FAIL";
+// (optional) you can ignore this if you don't use it anymore
+export const PRACTICE_ATTEMPT_ADD = "PRACTICE_ATTEMPT_ADD";
 
-export const GET_TOPUSERS_REQUEST = "GET_TOPUSERS_REQUEST";
-export const GET_TOPUSERS_SUCCESS = "GET_TOPUSERS_SUCCESS";
-export const GET_TOPUSERS_FAIL = "GET_TOPUSERS_FAIL";
+// ===================
+// OPTIONAL: store attempts locally (not required)
+// ===================
+export const savePracticeAttempt = (payload) => (dispatch) => {
+  dispatch({ type: PRACTICE_ATTEMPT_ADD, payload });
+};
 
-// ---------- helpers ----------
-async function ensureUserDoc({ uid, username, photoURL }) {
-  const ref = doc(db, "users", uid);
-  const snap = await getDoc(ref);
-
-  if (!snap.exists()) {
-    await setDoc(ref, {
-      uid,
-      username: username || "Unknown",
-      photoURL: photoURL || "",
-      createdAt: serverTimestamp(),
-      totalPoints: 0,
-      practiceAttempts: 0,
-      practiceMatches: 0,
-    });
-  }
-}
-
-function getUidAndProfile(getState) {
-  const authFirebase = getAuth();
-  const firebaseUser = authFirebase.currentUser;
-
-  if (!firebaseUser) {
-    console.error("❌ Firebase Auth currentUser is NULL (not logged in?)");
-    return { uid: null, username: null, photoURL: null };
-  }
-
-  const state = getState?.();
-  const reduxUser = state?.auth?.user;
-
-  const uid = firebaseUser.uid;
-  const username = reduxUser?.name || firebaseUser.displayName || "Unknown";
-  const photoURL = reduxUser?.photoURL || firebaseUser.photoURL || "";
-
-  return { uid, username, photoURL };
-}
-
-// ---------- actions ----------
-export const addSignData = (data) => async (dispatch, getState) => {
+// ===================
+// ADD SESSION + UPDATE USER TOTALS
+// ===================
+export const addSignData = (payload) => async (dispatch, getState) => {
   try {
-    dispatch({ type: ADD_SIGNDATA_REQUEST });
+    const state = getState();
+    const authUser = state.auth?.user;
 
-    const { uid, username, photoURL } = getUidAndProfile(getState);
-    if (!uid) throw new Error("No UID - user not logged in");
+    const userId =
+      payload.userId ||
+      authUser?.uid ||
+      authUser?.id ||
+      authUser?.userId;
 
-    await ensureUserDoc({ uid, username, photoURL });
+    console.log("[addSignData] payload =", payload);
+    console.log("[addSignData] authUser =", authUser);
+    console.log("[addSignData] resolved userId =", userId);
 
-    const payload = {
-      ...data,
-      userId: uid,
-      username: username || data.username || "Unknown",
-      createdAt: serverTimestamp(),
+    if (!userId) {
+      throw new Error("addSignData: userId is missing (auth user not loaded?)");
+    }
+
+    const signsPerformed = Array.isArray(payload.signsPerformed) ? payload.signsPerformed : [];
+    const stats = {
+      attempts: Number(payload.stats?.attempts || 0),
+      matches: Number(payload.stats?.matches || 0),
+      totalPoints: Number(payload.stats?.totalPoints || 0),
     };
 
-    await addDoc(collection(db, "sessions"), payload);
+    const sessionDoc = {
+      createdAt: serverTimestamp(),
+      createdAtISO: payload.createdAt || new Date().toISOString(),
+      id: payload.id,
+      mode: payload.mode || "detect",
+      secondsSpent: Number(payload.secondsSpent || 0),
 
-    console.log("✅ Firestore write OK: sessions", payload);
+      userId,
+      username: payload.username || authUser?.name || "Unknown",
 
-    dispatch({ type: ADD_SIGNDATA_SUCCESS });
+      signsPerformed,
+      stats,
+    };
+
+    console.log("[addSignData] writing sessionDoc =", sessionDoc);
+
+    // 1) write session
+    await addDoc(collection(db, "sessions"), sessionDoc);
+
+    // 2) update users totals for practice
+    if (sessionDoc.mode === "practice") {
+      const userRef = doc(db, "users", userId);
+
+      // ensure document exists
+      await setDoc(
+        userRef,
+        {
+          uid: userId,
+          username: sessionDoc.username,
+          createdAt: serverTimestamp(),
+          practiceAttempts: 0,
+          practiceMatches: 0,
+          totalPoints: 0,
+        },
+        { merge: true }
+      );
+
+      // increment totals
+      await updateDoc(userRef, {
+        practiceAttempts: increment(stats.attempts),
+        practiceMatches: increment(stats.matches),
+        totalPoints: increment(stats.totalPoints),
+      });
+
+      console.log("[addSignData] ✅ updated user totals", stats);
+    }
+
+    // refresh dashboard data
+    dispatch(getSignData());
+    dispatch(getTopUsers());
   } catch (err) {
     console.error("❌ addSignData failed:", err);
-    dispatch({ type: ADD_SIGNDATA_FAIL, payload: err?.message || String(err) });
+    // keep alert because you asked for "no thinking" + clear failure visibility
+    alert("addSignData failed: " + (err?.message || String(err)));
   }
 };
+
+// ===================
+// GET SESSIONS FOR CURRENT USER
+// FIX: NO MORE "missing userId" ERROR
+// ===================
 export const getSignData = () => async (dispatch, getState) => {
   try {
-    dispatch({ type: GET_SIGNDATA_REQUEST });
+    dispatch({ type: SIGNDATA_LOADING });
 
-    const { uid } = getUidAndProfile(getState);
-    if (!uid) throw new Error("No UID - user not logged in");
+    const state = getState();
+    const user = state.auth?.user;
 
-    // ✅ no orderBy => no composite index needed
-    const q = query(
-      collection(db, "sessions"),
-      where("userId", "==", uid),
-      limit(200),
-    );
+    // ✅ robust extraction (matches addSignData)
+    const userId = user?.uid || user?.id || user?.userId;
 
+    // If auth not ready, just return empty list (don't break dashboard)
+    if (!userId) {
+      dispatch({ type: SIGNDATA_SUCCESS, payload: [] });
+      return;
+    }
+
+    const q = query(collection(db, "sessions"), where("userId", "==", userId));
     const snap = await getDocs(q);
-    const items = snap.docs.map((d) => ({ _docId: d.id, ...d.data() }));
 
-    // sort in JS instead of Firestore
-    items.sort((a, b) => {
-      const ta = a.createdAt?.seconds ? a.createdAt.seconds : 0;
-      const tb = b.createdAt?.seconds ? b.createdAt.seconds : 0;
-      return tb - ta;
-    });
+    const list = snap.docs.map((d) => ({ _docId: d.id, ...d.data() }));
 
-    dispatch({ type: GET_SIGNDATA_SUCCESS, payload: items });
+    dispatch({ type: SIGNDATA_SUCCESS, payload: list });
   } catch (err) {
-    console.error("❌ getSignData failed:", err);
-    dispatch({ type: GET_SIGNDATA_FAIL, payload: err?.message || String(err) });
+    console.error("getSignData failed:", err);
+    dispatch({ type: SIGNDATA_FAIL, payload: err?.message || String(err) });
   }
 };
 
+// ===================
+// GET LEADERBOARD
+// ===================
 export const getTopUsers = () => async (dispatch) => {
   try {
-    dispatch({ type: GET_TOPUSERS_REQUEST });
-
-    const q = query(
-      collection(db, "users"),
-      orderBy("totalPoints", "desc"),
-      limit(10),
-    );
-
+    const q = query(collection(db, "users"), orderBy("totalPoints", "desc"), limit(10));
     const snap = await getDocs(q);
-    const users = snap.docs.map((d, idx) => {
-      const u = d.data();
-      return {
-        rank: idx + 1,
-        username: u.username || "Unknown",
-        totalPoints: u.totalPoints || 0,
-        photoURL: u.photoURL || "",
-      };
-    });
 
-    console.log("✅ Firestore read OK: topUsers count =", users.length);
+    const list = snap.docs.map((d, idx) => ({
+      uid: d.id,
+      ...d.data(),
+      rank: idx + 1,
+    }));
 
-    dispatch({ type: GET_TOPUSERS_SUCCESS, payload: users });
+    dispatch({ type: TOPUSERS_SUCCESS, payload: list });
   } catch (err) {
-    console.error("❌ getTopUsers failed:", err);
-    dispatch({ type: GET_TOPUSERS_FAIL, payload: err?.message || String(err) });
+    console.error("getTopUsers failed:", err);
+    dispatch({ type: TOPUSERS_FAIL, payload: err?.message || String(err) });
   }
 };
-
-export const savePracticeAttempt =
-  ({ targetSign, detectedSign, score, matched, points }) =>
-  async (dispatch, getState) => {
-    try {
-      const { uid, username, photoURL } = getUidAndProfile(getState);
-      if (!uid) return;
-
-      await ensureUserDoc({ uid, username, photoURL });
-
-      await addDoc(collection(db, "practice_attempts"), {
-        userId: uid,
-        username,
-        targetSign,
-        detectedSign,
-        score,
-        matched: !!matched,
-        points: Number(points) || 0,
-        createdAt: serverTimestamp(),
-      });
-
-      await updateDoc(doc(db, "users", uid), {
-        totalPoints: increment(Number(points) || 0),
-        practiceAttempts: increment(1),
-        practiceMatches: increment(matched ? 1 : 0),
-      });
-
-      console.log("✅ Firestore write OK: practice_attempts + users update");
-    } catch (err) {
-      console.error("❌ savePracticeAttempt failed:", err);
-    }
-  };

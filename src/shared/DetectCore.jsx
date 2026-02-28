@@ -8,16 +8,16 @@ import { HAND_CONNECTIONS } from "@mediapipe/hands";
 import Webcam from "react-webcam";
 import { SignImageData } from "../data/SignImageData";
 import { useDispatch, useSelector } from "react-redux";
-import { addSignData, savePracticeAttempt } from "../redux/actions/signdataaction";
+import { addSignData } from "../redux/actions/signdataaction";
 import ProgressBar from "../components/Detect/ProgressBar/ProgressBar";
 import DisplayImg from "../assests/displayGif.gif";
 
 let startTime = null;
 
-const PRACTICE_THRESHOLD = 0.45; // 🔥 coboară ca să prinzi match-uri
+const PRACTICE_DETECT_THRESHOLD = 0.15; // ✅ attempt dacă score >= 15%
+const MATCH_THRESHOLD = 0.20;          // ✅ match dacă score >= 20%
 const BASE_POINTS = 50;
 
-// normalize: THANK_YOU -> THANKYOU, I_LOVE_YOU -> ILOVEYOU
 const normalizeSign = (s) => (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 const DetectCore = ({ mode = "translate" }) => {
@@ -32,40 +32,40 @@ const DetectCore = ({ mode = "translate" }) => {
   const [gestureOutput, setGestureOutput] = useState("");
   const [progress, setProgress] = useState(0);
 
+  // translate collection
   const [detectedData, setDetectedData] = useState([]);
 
-  // practice counts
-  const practiceCountsRef = useRef(new Map());
+  // practice: counts + stats
+  const practiceCountsRef = useRef(new Map());   // ✅ store detected gestures counts
+  const practiceStatsRef = useRef({ attempts: 0, matches: 0, totalPoints: 0 });
 
-  // anti-spam: allow only once per image every X ms
-  const lastMatchAtRef = useRef(0);
+  // throttle attempt counting
+  const lastAttemptAtRef = useRef(0);
 
   const user = useSelector((state) => state.auth?.user);
   const { accessToken } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
 
   const [currentImage, setCurrentImage] = useState(null);
-  const [matchMsg, setMatchMsg] = useState(""); // ✅ show feedback
+  const [matchMsg, setMatchMsg] = useState("");
 
-  // rotate images in practice
+  // set/rotate images in practice
   useEffect(() => {
     let intervalId;
-    if (webcamRunning && mode === "practice") {
-      // show first image instantly
-      const randomIndex = Math.floor(Math.random() * SignImageData.length);
-      setCurrentImage(SignImageData[randomIndex]);
+    if (webcamRunning && mode === "practice" && SignImageData?.length) {
+      // set first
+      setCurrentImage((prev) => prev ?? SignImageData[Math.floor(Math.random() * SignImageData.length)]);
 
       intervalId = setInterval(() => {
-        const idx = Math.floor(Math.random() * SignImageData.length);
-        setCurrentImage(SignImageData[idx]);
+        setCurrentImage(SignImageData[Math.floor(Math.random() * SignImageData.length)]);
       }, 5000);
     } else {
       setCurrentImage(null);
     }
+
     return () => clearInterval(intervalId);
   }, [webcamRunning, mode]);
 
-  // reset message when image changes
   useEffect(() => {
     setMatchMsg("");
   }, [currentImage?.id]);
@@ -78,8 +78,9 @@ const DetectCore = ({ mode = "translate" }) => {
       try {
         const modelPath =
           process.env.REACT_APP_TRAINED_MODEL_PATH ||
-          process.env.REACT_APP_FIREBASE_STORAGE_TRAINED_MODEL_15_11_2025;
+          process.env.REACT_APP_FIREBASE_STORAGE_TRAINED_MODEL;
 
+        console.log("[MODEL PATH]", modelPath);
         if (!modelPath) throw new Error("Model path missing in .env");
 
         const vision = await FilesetResolver.forVisionTasks(
@@ -94,6 +95,7 @@ const DetectCore = ({ mode = "translate" }) => {
 
         if (cancelled) return;
         recognizerRef.current = recognizer;
+        console.log("✅ GestureRecognizer loaded");
       } catch (e) {
         console.error("Failed to load gesture recognizer ❌", e);
       }
@@ -158,65 +160,70 @@ const DetectCore = ({ mode = "translate" }) => {
         }
       }
 
-      if (results?.gestures?.length > 0 && results.gestures[0]?.length > 0) {
-        const top = results.gestures[0][0];
-        const gestureName = top.categoryName || "";
-        const score = typeof top.score === "number" ? top.score : 0;
-
-        setGestureOutput(gestureName);
-        setProgress(Math.round(score * 100));
-
-        // translate mode collection
-        if (mode !== "practice") {
-          setDetectedData((prev) => [...prev, { SignDetected: gestureName, DetectedScore: score }]);
-        }
-
-        // PRACTICE MATCH
-        if (mode === "practice" && currentImage) {
-          const targetRaw = currentImage.sign || currentImage.name || "";
-          const target = normalizeSign(targetRaw);
-          const detected = normalizeSign(gestureName);
-
-          const matched = target && detected && target === detected && score >= PRACTICE_THRESHOLD;
-
-          // throttle: 1 match per 1 sec max
-          const now = Date.now();
-          if (matched && now - lastMatchAtRef.current > 1000) {
-            lastMatchAtRef.current = now;
-
-            const points = Math.max(10, Math.round(BASE_POINTS * score));
-            const m = practiceCountsRef.current;
-
-            // increment count
-            const prev = m.get(targetRaw) || 0;
-            m.set(targetRaw, prev + 1);
-
-            // UI feedback
-            setMatchMsg(`✅ MATCH: ${targetRaw} (+${points} pts)`);
-
-            // save attempt + points
-            dispatch(
-              savePracticeAttempt({
-                targetSign: targetRaw,
-                detectedSign: gestureName,
-                score,
-                matched: true,
-                points,
-              })
-            );
-
-            console.log("✅ PRACTICE MATCH COUNTED", {
-              targetRaw,
-              gestureName,
-              score,
-              points,
-              countNow: prev + 1,
-            });
-          }
-        }
-      } else {
+      if (!(results?.gestures?.length > 0 && results.gestures[0]?.length > 0)) {
         setGestureOutput("");
         setProgress(0);
+        requestRef.current = requestAnimationFrame(predictWebcam);
+        return;
+      }
+
+      const top = results.gestures[0][0];
+      const gestureName = top.categoryName || "";
+      const score = typeof top.score === "number" ? top.score : 0;
+
+      setGestureOutput(gestureName);
+      setProgress(Math.round(score * 100));
+
+      // translate mode
+      if (mode !== "practice") {
+        setDetectedData((prev) => [...prev, { SignDetected: gestureName, DetectedScore: score }]);
+      }
+
+      // ✅ PRACTICE: count attempts on any confident detection, store detected gestures
+      if (mode === "practice") {
+        const now = Date.now();
+        if (now - lastAttemptAtRef.current > 400 && score >= PRACTICE_DETECT_THRESHOLD) {
+          lastAttemptAtRef.current = now;
+
+          // attempt always
+          practiceStatsRef.current = {
+            ...practiceStatsRef.current,
+            attempts: practiceStatsRef.current.attempts + 1,
+          };
+
+          // points even without match (so dashboard has data)
+          const points = Math.max(1, Math.round(BASE_POINTS * score));
+          practiceStatsRef.current = {
+            attempts: practiceStatsRef.current.attempts,
+            matches: practiceStatsRef.current.matches,
+            totalPoints: practiceStatsRef.current.totalPoints + points,
+          };
+
+          // count detected gesture frequency (THIS feeds your dashboard)
+          const m = practiceCountsRef.current;
+          m.set(gestureName, (m.get(gestureName) || 0) + 1);
+
+          // match with target (optional)
+          if (currentImage) {
+            const targetRaw = currentImage.sign || currentImage.name || "";
+            const target = normalizeSign(targetRaw);
+            const detected = normalizeSign(gestureName);
+            const isMatch = target && detected && target === detected && score >= MATCH_THRESHOLD;
+
+            if (isMatch) {
+              practiceStatsRef.current = {
+                attempts: practiceStatsRef.current.attempts,
+                matches: practiceStatsRef.current.matches + 1,
+                totalPoints: practiceStatsRef.current.totalPoints,
+              };
+              setMatchMsg(`✅ MATCH: ${targetRaw} (${Math.round(score * 100)}%)`);
+            } else {
+              setMatchMsg(`❌ Detected: ${gestureName} (${Math.round(score * 100)}%)`);
+            }
+          } else {
+            setMatchMsg(`Detected: ${gestureName} (${Math.round(score * 100)}%)`);
+          }
+        }
       }
     } catch (e) {
       console.warn("recognizeForVideo frame failed:", e);
@@ -225,7 +232,7 @@ const DetectCore = ({ mode = "translate" }) => {
     }
 
     requestRef.current = requestAnimationFrame(predictWebcam);
-  }, [mode, currentImage, dispatch]);
+  }, [mode, currentImage]);
 
   const enableCam = useCallback(() => {
     if (!recognizerRef.current) {
@@ -239,16 +246,44 @@ const DetectCore = ({ mode = "translate" }) => {
       setWebcamRunning(false);
       stopLoop();
       clearCanvas();
-      setGestureOutput("");
-      setProgress(0);
 
       const endTime = new Date();
       const timeElapsed = startTime
         ? ((endTime.getTime() - startTime.getTime()) / 1000).toFixed(2)
         : "0.00";
 
-      // SAVE translate session
+      const userId = user?.uid || user?.id || user?.userId;
+
+      if (mode === "practice") {
+        const signsPerformed = Array.from(practiceCountsRef.current.entries()).map(
+          ([sign, count]) => ({ SignDetected: sign, count })
+        );
+
+        const stats = practiceStatsRef.current;
+
+        console.log("[STOP PRACTICE] signsPerformed=", signsPerformed);
+        console.log("[STOP PRACTICE] stats=", stats);
+
+        dispatch(
+          addSignData({
+            id: uuidv4(),
+            userId,
+            username: user?.name,
+            createdAt: endTime.toISOString(),
+            secondsSpent: Number(timeElapsed),
+            mode: "practice",
+            signsPerformed,
+            stats,
+          })
+        );
+
+        // reset
+        practiceCountsRef.current = new Map();
+        practiceStatsRef.current = { attempts: 0, matches: 0, totalPoints: 0 };
+      }
+
       if (mode !== "practice") {
+        // existing translate save logic
         const nonEmpty = detectedData.filter(
           (d) => d.SignDetected && typeof d.DetectedScore === "number"
         );
@@ -276,58 +311,43 @@ const DetectCore = ({ mode = "translate" }) => {
         dispatch(
           addSignData({
             id: uuidv4(),
+            userId,
             username: user?.name,
-            createdAt: String(endTime),
+            createdAt: endTime.toISOString(),
             secondsSpent: Number(timeElapsed),
             mode: "detect",
             signsPerformed: outputArray,
+            stats: { totalPoints: 0, attempts: 0, matches: 0 },
           })
         );
 
         setDetectedData([]);
       }
 
-      // SAVE practice session (ALWAYS)
-      if (mode === "practice") {
-        const m = practiceCountsRef.current;
-
-        const signsPerformed = Array.from(m.entries()).map(([sign, count]) => ({
-          SignDetected: sign,
-          count,
-        }));
-
-        console.log("✅ SAVING PRACTICE SESSION signsPerformed =", signsPerformed);
-
-        dispatch(
-          addSignData({
-            id: uuidv4(),
-            username: user?.name,
-            createdAt: String(endTime),
-            secondsSpent: Number(timeElapsed),
-            mode: "practice",
-            signsPerformed,
-          })
-        );
-
-        practiceCountsRef.current = new Map();
-      }
-
       startTime = null;
-      setCurrentImage(null);
+      setGestureOutput("");
+      setProgress(0);
       setMatchMsg("");
+      setCurrentImage(null);
     } else {
       // START
       startTime = new Date();
       setDetectedData([]);
+
       practiceCountsRef.current = new Map();
-      lastMatchAtRef.current = 0;
+      practiceStatsRef.current = { attempts: 0, matches: 0, totalPoints: 0 };
+      lastAttemptAtRef.current = 0;
+
+      // ensure practice has an image immediately
+      if (mode === "practice" && SignImageData?.length) {
+        setCurrentImage(SignImageData[Math.floor(Math.random() * SignImageData.length)]);
+      }
 
       webcamRunningRef.current = true;
       setWebcamRunning(true);
-
       requestRef.current = requestAnimationFrame(predictWebcam);
     }
-  }, [mode, detectedData, user?.name, dispatch, clearCanvas, stopLoop, predictWebcam]);
+  }, [mode, detectedData, user, dispatch, clearCanvas, stopLoop, predictWebcam]);
 
   useEffect(() => {
     return () => {
@@ -364,9 +384,7 @@ const DetectCore = ({ mode = "translate" }) => {
                   <p style={{ marginTop: 10, fontWeight: 700 }}>{matchMsg}</p>
                 ) : null}
 
-                {progress > 0 && mode === "practice" ? (
-                  <ProgressBar progress={progress} />
-                ) : null}
+                {progress > 0 && mode === "practice" ? <ProgressBar progress={progress} /> : null}
               </div>
             </div>
           </div>
@@ -380,9 +398,6 @@ const DetectCore = ({ mode = "translate" }) => {
                     <img src={currentImage.url} alt={`img ${currentImage.id}`} />
                     <p>
                       Do the sign for: <b>{currentImage.sign || currentImage.name}</b>
-                    </p>
-                    <p style={{ opacity: 0.8 }}>
-                      Matching uses normalize + threshold ≥ {Math.round(PRACTICE_THRESHOLD * 100)}%
                     </p>
                   </>
                 ) : (

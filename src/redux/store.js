@@ -1,15 +1,16 @@
-// src/redux/store.js
-import { createStore, applyMiddleware, combineReducers } from "redux";
+import { createStore, applyMiddleware, compose, combineReducers } from "redux";
 import thunk from "redux-thunk";
+
 import { authReducer } from "./reducer/authReducer";
-import { SignReducer, TopSignUsersReducer } from "./reducer/signReducer";
+import signReducer from "./reducer/signReducer";
 
 const rootReducer = combineReducers({
   auth: authReducer,
-  signData: SignReducer,
-  topUsers: TopSignUsersReducer,
+  signData: signReducer,
 });
 
-const store = createStore(rootReducer, applyMiddleware(thunk));
+const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
+
+const store = createStore(rootReducer, composeEnhancers(applyMiddleware(thunk)));
 
 export default store;

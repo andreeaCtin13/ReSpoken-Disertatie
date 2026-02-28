@@ -14,7 +14,10 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-
+console.log("apiKey raw =", process.env.REACT_APP_FIREBASE_API_KEY);
+console.log("apiKey typeof =", typeof process.env.REACT_APP_FIREBASE_API_KEY);
+console.log("apiKey len =", process.env.REACT_APP_FIREBASE_API_KEY?.length);
+console.log("startsWith AIza =", process.env.REACT_APP_FIREBASE_API_KEY?.startsWith("AIza"));
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
