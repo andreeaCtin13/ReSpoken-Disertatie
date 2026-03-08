@@ -1,57 +1,171 @@
-.signlang_features{
-   width:100%;
-   display: flex;
-   justify-content: space-between;
+.signlang_features {
+  width: min(92%, 1280px);
+  margin: 5rem auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 4rem;
 }
 
-.signlang_feature-heading{
-    display: flex;
-    flex: 1;
-    justify-content: flex-start;
-    align-items: flex-start;
-    flex-direction: column;
-    text-align: left;
-    margin-right: 5rem;
+.signlang_feature-heading {
+  display: flex;
+  flex: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  flex-direction: column;
+  text-align: left;
+  margin-right: 2rem;
+  max-width: 460px;
+  position: sticky;
+  top: 120px;
 }
 
 .signlang_feature-heading h1 {
-    font-size: 34px;
-    line-height: 45px;
-    font-weight: 800;
-    font-family: var(--font-family);
+  font-size: clamp(2.4rem, 4vw, 4.2rem);
+  line-height: 1.12;
+  font-weight: 800;
+  font-family: var(--font-family);
+  margin: 0;
+
+  background: linear-gradient(90deg, #b86cff 0%, #d98bdc 45%, #f0a37a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .signlang_feature-heading p {
-    color: var(--color-subtext);
-    font-size: 16px;
-    line-height: 30px;
-    font-weight: 500;
-    font-family: var(--font-family);
-    margin-top: 2rem;
+  color: #f4b11a;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  font-weight: 600;
+  font-family: var(--font-family);
+  margin-top: 2rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.signlang_feature-heading p:hover {
+  transform: translateX(4px);
+  opacity: 0.9;
 }
 
 .singlang_features-container {
-    display: flex;
-    flex: 1.5;
-    justify-content: flex-start;
-    align-items: center;
-    flex-direction: column;
+  display: flex;
+  flex: 1.5;
+  justify-content: flex-start;
+  align-items: stretch;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
+/* dacă feature items au deja propria structură */
+.singlang_features-container .signlang__features-container__feature {
+  padding: 1.5rem 1.25rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.singlang_features-container .signlang__features-container__feature:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+}
+
+/* title line */
+.singlang_features-container
+  .signlang__features-container__feature-title
+  div {
+  width: 42px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #c77dff, #f4b11a);
+  margin-bottom: 0.8rem;
+}
+
+/* feature title */
+.singlang_features-container
+  .signlang__features-container__feature-title
+  h1,
+.singlang_features-container
+  .signlang__features-container__feature-title
+  h2,
+.singlang_features-container
+  .signlang__features-container__feature-title
+  h3,
+.singlang_features-container
+  .signlang__features-container__feature-title
+  h4 {
+  color: #fff;
+  font-size: 1.8rem;
+  line-height: 1.2;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* feature text */
+.singlang_features-container
+  .signlang__features-container_feature-text {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.08rem;
+  line-height: 1.7;
+  margin-top: 0.8rem;
+}
 
 @media screen and (max-width: 990px) {
-    .signlang_features{
-        flex-direction: column;
-    }
+  .signlang_features {
+    flex-direction: column;
+    gap: 2.5rem;
+    margin: 4rem auto;
+  }
 
-    .signlang_feature-heading{
-        margin: 0 0 2rem 0; 
-    }
+  .signlang_feature-heading {
+    margin: 0;
+    max-width: 100%;
+    position: static;
+  }
 }
 
 @media screen and (max-width: 550px) {
-    .signlang_feature-heading h1{
-        font-size: 28px;
-        line-height: 38px;
-    }
+  .signlang_features {
+    width: min(94%, 1280px);
+    gap: 2rem;
+  }
+
+  .signlang_feature-heading h1 {
+    font-size: clamp(2rem, 9vw, 2.8rem);
+    line-height: 1.2;
+  }
+
+  .signlang_feature-heading p {
+    font-size: 1rem;
+    margin-top: 1.4rem;
+  }
+
+  .singlang_features-container .signlang__features-container__feature {
+    padding: 1.2rem 1rem;
+    border-radius: 16px;
+  }
+
+  .singlang_features-container
+    .signlang__features-container__feature-title
+    h1,
+  .singlang_features-container
+    .signlang__features-container__feature-title
+    h2,
+  .singlang_features-container
+    .signlang__features-container__feature-title
+    h3,
+  .singlang_features-container
+    .signlang__features-container__feature-title
+    h4 {
+    font-size: 1.45rem;
+  }
+
+  .singlang_features-container
+    .signlang__features-container_feature-text {
+    font-size: 1rem;
+    line-height: 1.65;
+  }
 }

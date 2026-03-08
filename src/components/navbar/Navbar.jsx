@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./Navbar.css";
 import { Link, NavLink } from "react-router-dom";
-import logo from "../../assests/logo.png";
 import { RiMenu3Line, RiCloseLine } from "react-icons/ri";
 import { useDispatch, useSelector } from "react-redux";
 import { login, logout } from "../../redux/actions/authaction";
@@ -49,12 +48,6 @@ const Navbar = ({ notifyMsg }) => {
   return (
     <nav className="signlang_navbar gradient__bg">
       <div className="singlang_navlinks">
-        {/* LOGO */}
-        <div className="signlang_navlinks_logo">
-          <Link to="/home">
-            <img className="logo" src={logo} alt="logo" />
-          </Link>
-        </div>
 
         {/* DESKTOP LINKS */}
         <div className="signlang_navlinks_container">

@@ -10,7 +10,7 @@ const NotFound = () => {
         </div>
 
         <div className="signlang_notfound-data">
-            <p className='gradient__text'>This Page Doesn't exists. Please Click on below button to go back to SLR</p>
+            <p className='gradient__text'>This Page Doesn't exists. Please Click on below button to go back to ReSpoken.</p>
             
             <button>
                 <a href="/">

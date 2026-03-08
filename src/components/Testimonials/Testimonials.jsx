@@ -1,23 +1,37 @@
-import React from 'react'
-import "./Testimonials.css"
-import { userFeedback } from '../../data/FeedbackData'
-import Card from './Card/Card'
+import React from "react";
+import "./Testimonials.css";
+import { userFeedback } from "../../data/FeedbackData";
+import Card from "./Card/Card";
 
 const Testimonials = () => {
-    return (
-        <div className='signlang_testimonials-container section__padding'>
-            <div className="signlang_testimonial-header">
-                <h2 className='gradient__text'>Here are the Feedback given by the users and domain experts
-                </h2>
-            </div>
+  const loopedFeedback = [...userFeedback, ...userFeedback];
 
-            <div className="signlang_card-container">
-               {userFeedback.map((data,i)=>(
-                  <Card title={data.title} text={data.text} tag={data.tag} key={i*991}/>
-               ))}
+  return (
+    <section className="signlang_testimonials section__padding">
+      <div className="signlang_testimonial-header">
+        <span className="signlang_testimonial-badge">Testimonials</span>
+
+        <h2 className="signlang_testimonial-title">
+          What users and domain experts say about our platform
+        </h2>
+
+        <p className="signlang_testimonial-subtitle">
+          Real feedback from people who explored the experience, usability and
+          impact of the sign language web application.
+        </p>
+      </div>
+
+      <div className="signlang_testimonials-marquee">
+        <div className="signlang_testimonials-track">
+          {loopedFeedback.map((data, i) => (
+            <div className="signlang_testimonials-slide" key={`${data.title}-${i}`}>
+              <Card title={data.title} text={data.text} tag={data.tag} />
             </div>
+          ))}
         </div>
-    )
-}
+      </div>
+    </section>
+  );
+};
 
-export default Testimonials
+export default Testimonials;

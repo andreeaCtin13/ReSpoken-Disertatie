@@ -1,6 +1,6 @@
 import React from 'react'
 import "./Footer.css"
-import logo from "../../assests/logo.png"
+import logo from "../../assests/logo_footer.png"
 
 const Footer = () => {
   return (
@@ -13,7 +13,7 @@ const Footer = () => {
       <div className="signlang__footer-copyright">
         <h3>
           
-          <span>SLR</span>
+          <span>@AndreeaConstantin</span>
           &nbsp;&nbsp;
           All rights reserved.
         </h3>

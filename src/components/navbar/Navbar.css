@@ -8,7 +8,7 @@
   justify-content: space-between;
   align-items: center;
 
-  padding: 0.5rem;
+  padding: 2rem;
   width: 100%;
 
   z-index: 99999; /* 🔥 FIX */
@@ -26,8 +26,8 @@
 }
 
 .signlang_navlinks_logo .logo {
-  width: 23rem;
-  height: 6rem;
+  width: 7rem;
+  height: 7rem;
   margin-left: 5rem;
   cursor: pointer;
 }
@@ -37,20 +37,29 @@
   flex: 1;
   justify-content: flex-end;
   align-items: center;
+  gap: 1.5rem;
 }
 
 .signlang_navlinks_container a {
   padding: 0 1rem;
 }
 
+/* 🔥 text consistent Home + mobile menu */
+
 .signlang_navlinks_container p,
 .signlang__navbar-menu_container p {
   color: #fff;
   font-family: var(--font-family);
   font-weight: 500;
-  font-size: 20px;
-  letter-spacing: 2px;
+  font-size: 18px;
+  letter-spacing: 1px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.signlang_navlinks_container p:hover {
+  opacity: 0.8;
 }
 
 .signlang_auth-data {
@@ -64,20 +73,32 @@
   border-radius: 50%;
 }
 
+/* 🔥 Login button desktop */
+
 .signlang_auth-data button,
 .signlang__navbar-menu_container button {
-  padding: 0.5rem 1rem;
+  font-size: 18px;
+  padding: 0.55rem 1.3rem;
   margin-left: 1rem;
   color: #fff;
-  background: var(--color-subtext);
+  background: linear-gradient(135deg, #f4b11a, #e19a16);
   border: none;
-  border-radius: 5px;
+  border-radius: 14px;
   cursor: pointer;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+.signlang_auth-data button:hover,
+.signlang__navbar-menu_container button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(244, 177, 26, 0.35);
 }
 
 .signlang__navbar-menu {
   display: none;
   position: relative;
+  color: white;
 }
 
 .signlang__navbar-menu_container {
@@ -89,7 +110,7 @@
   flex-direction: column;
   align-items: center;
 
-  background: var(--color-footer);
+  background: var(--color-hamburger-menu);
   padding: 2rem;
   min-width: 220px;
   border-radius: 5px;

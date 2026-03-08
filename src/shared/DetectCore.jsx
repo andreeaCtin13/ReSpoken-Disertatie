@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import "../components/Detect/Detect.css";
+import "./Detect.css";
 import { v4 as uuidv4 } from "uuid";
 import { FilesetResolver, GestureRecognizer } from "@mediapipe/tasks-vision";
 import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
@@ -14,8 +14,8 @@ import DisplayImg from "../assests/displayGif.gif";
 
 let startTime = null;
 
-const PRACTICE_DETECT_THRESHOLD = 0.15; // ✅ attempt dacă score >= 15%
-const MATCH_THRESHOLD = 0.20;          // ✅ match dacă score >= 20%
+const PRACTICE_DETECT_THRESHOLD = 0.15;
+const MATCH_THRESHOLD = 0.20;
 const BASE_POINTS = 50;
 
 const normalizeSign = (s) => (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -32,14 +32,11 @@ const DetectCore = ({ mode = "translate" }) => {
   const [gestureOutput, setGestureOutput] = useState("");
   const [progress, setProgress] = useState(0);
 
-  // translate collection
   const [detectedData, setDetectedData] = useState([]);
 
-  // practice: counts + stats
-  const practiceCountsRef = useRef(new Map());   // ✅ store detected gestures counts
+  const practiceCountsRef = useRef(new Map());
   const practiceStatsRef = useRef({ attempts: 0, matches: 0, totalPoints: 0 });
 
-  // throttle attempt counting
   const lastAttemptAtRef = useRef(0);
 
   const user = useSelector((state) => state.auth?.user);
@@ -49,15 +46,19 @@ const DetectCore = ({ mode = "translate" }) => {
   const [currentImage, setCurrentImage] = useState(null);
   const [matchMsg, setMatchMsg] = useState("");
 
-  // set/rotate images in practice
   useEffect(() => {
     let intervalId;
+
     if (webcamRunning && mode === "practice" && SignImageData?.length) {
-      // set first
-      setCurrentImage((prev) => prev ?? SignImageData[Math.floor(Math.random() * SignImageData.length)]);
+      setCurrentImage(
+        (prev) =>
+          prev ?? SignImageData[Math.floor(Math.random() * SignImageData.length)]
+      );
 
       intervalId = setInterval(() => {
-        setCurrentImage(SignImageData[Math.floor(Math.random() * SignImageData.length)]);
+        setCurrentImage(
+          SignImageData[Math.floor(Math.random() * SignImageData.length)]
+        );
       }, 5000);
     } else {
       setCurrentImage(null);
@@ -70,7 +71,6 @@ const DetectCore = ({ mode = "translate" }) => {
     setMatchMsg("");
   }, [currentImage?.id]);
 
-  // load recognizer
   useEffect(() => {
     let cancelled = false;
 
@@ -102,6 +102,7 @@ const DetectCore = ({ mode = "translate" }) => {
     }
 
     loadGestureRecognizer();
+
     return () => {
       cancelled = true;
     };
@@ -155,8 +156,14 @@ const DetectCore = ({ mode = "translate" }) => {
 
       if (results?.landmarks) {
         for (const lm of results.landmarks) {
-          drawConnectors(ctx, lm, HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 5 });
-          drawLandmarks(ctx, lm, { color: "#FF0000", lineWidth: 2 });
+          drawConnectors(ctx, lm, HAND_CONNECTIONS, {
+            color: "#9d7bff",
+            lineWidth: 4,
+          });
+          drawLandmarks(ctx, lm, {
+            color: "#ffb27d",
+            lineWidth: 2,
+          });
         }
       }
 
@@ -174,41 +181,41 @@ const DetectCore = ({ mode = "translate" }) => {
       setGestureOutput(gestureName);
       setProgress(Math.round(score * 100));
 
-      // translate mode
       if (mode !== "practice") {
-        setDetectedData((prev) => [...prev, { SignDetected: gestureName, DetectedScore: score }]);
+        setDetectedData((prev) => [
+          ...prev,
+          { SignDetected: gestureName, DetectedScore: score },
+        ]);
       }
 
-      // ✅ PRACTICE: count attempts on any confident detection, store detected gestures
       if (mode === "practice") {
         const now = Date.now();
+
         if (now - lastAttemptAtRef.current > 400 && score >= PRACTICE_DETECT_THRESHOLD) {
           lastAttemptAtRef.current = now;
 
-          // attempt always
           practiceStatsRef.current = {
             ...practiceStatsRef.current,
             attempts: practiceStatsRef.current.attempts + 1,
           };
 
-          // points even without match (so dashboard has data)
           const points = Math.max(1, Math.round(BASE_POINTS * score));
+
           practiceStatsRef.current = {
             attempts: practiceStatsRef.current.attempts,
             matches: practiceStatsRef.current.matches,
             totalPoints: practiceStatsRef.current.totalPoints + points,
           };
 
-          // count detected gesture frequency (THIS feeds your dashboard)
           const m = practiceCountsRef.current;
           m.set(gestureName, (m.get(gestureName) || 0) + 1);
 
-          // match with target (optional)
           if (currentImage) {
             const targetRaw = currentImage.sign || currentImage.name || "";
             const target = normalizeSign(targetRaw);
             const detected = normalizeSign(gestureName);
-            const isMatch = target && detected && target === detected && score >= MATCH_THRESHOLD;
+            const isMatch =
+              target && detected && target === detected && score >= MATCH_THRESHOLD;
 
             if (isMatch) {
               practiceStatsRef.current = {
@@ -241,7 +248,6 @@ const DetectCore = ({ mode = "translate" }) => {
     }
 
     if (webcamRunningRef.current) {
-      // STOP
       webcamRunningRef.current = false;
       setWebcamRunning(false);
       stopLoop();
@@ -261,9 +267,6 @@ const DetectCore = ({ mode = "translate" }) => {
 
         const stats = practiceStatsRef.current;
 
-        console.log("[STOP PRACTICE] signsPerformed=", signsPerformed);
-        console.log("[STOP PRACTICE] stats=", stats);
-
         dispatch(
           addSignData({
             id: uuidv4(),
@@ -277,25 +280,25 @@ const DetectCore = ({ mode = "translate" }) => {
           })
         );
 
-        // reset
         practiceCountsRef.current = new Map();
         practiceStatsRef.current = { attempts: 0, matches: 0, totalPoints: 0 };
       }
 
       if (mode !== "practice") {
-        // existing translate save logic
         const nonEmpty = detectedData.filter(
           (d) => d.SignDetected && typeof d.DetectedScore === "number"
         );
 
         const resultArray = [];
         let current = nonEmpty[0];
+
         for (let i = 1; i < nonEmpty.length; i++) {
           if (nonEmpty[i].SignDetected !== current.SignDetected) {
             resultArray.push(current);
             current = nonEmpty[i];
           }
         }
+
         if (current) resultArray.push(current);
 
         const countMap = new Map();
@@ -330,7 +333,6 @@ const DetectCore = ({ mode = "translate" }) => {
       setMatchMsg("");
       setCurrentImage(null);
     } else {
-      // START
       startTime = new Date();
       setDetectedData([]);
 
@@ -338,9 +340,10 @@ const DetectCore = ({ mode = "translate" }) => {
       practiceStatsRef.current = { attempts: 0, matches: 0, totalPoints: 0 };
       lastAttemptAtRef.current = 0;
 
-      // ensure practice has an image immediately
       if (mode === "practice" && SignImageData?.length) {
-        setCurrentImage(SignImageData[Math.floor(Math.random() * SignImageData.length)]);
+        setCurrentImage(
+          SignImageData[Math.floor(Math.random() * SignImageData.length)]
+        );
       }
 
       webcamRunningRef.current = true;
@@ -356,65 +359,168 @@ const DetectCore = ({ mode = "translate" }) => {
     };
   }, [stopLoop]);
 
-  const modeLabel = mode === "translate" ? "TRANSLATE MODE" : "PRACTICE MODE";
+  const modeLabel = mode === "translate" ? "Translate mode" : "Practice mode";
+  const modeTitle =
+    mode === "translate"
+      ? "Live sign translation"
+      : "Practice with guided signs";
+
+  const modeText =
+    mode === "translate"
+      ? "Use your camera to detect gestures live and save your most recognized signs."
+      : "Follow the sign prompt, perform the gesture and track your match confidence in real time.";
 
   return (
-    <div className="signlang_detection-container">
-      {accessToken ? (
-        <>
-          <div style={{ position: "relative" }}>
-            <div className="signlang_mode-header">
-              <div className="signlang_mode-label">
-                <span>{modeLabel}</span>
+    <section className="signlang_detection-page">
+      <div className="signlang_detection-bg signlang_detection-bg--one" />
+      <div className="signlang_detection-bg signlang_detection-bg--two" />
+
+      <div className="signlang_detection-container">
+        {accessToken ? (
+          <>
+            <div className="signlang_detection-hero">
+              <div className="signlang_detection-hero-copy">
+                <span className="signlang_detection-pill">{modeLabel}</span>
+                <h1>{modeTitle}</h1>
+                <p>{modeText}</p>
+              </div>
+
+              <div className="signlang_detection-hero-mini">
+                <div className="signlang_detection-mini-card">
+                  <span>Status</span>
+                  <strong>{webcamRunning ? "Session active" : "Ready to start"}</strong>
+                </div>
+
+                <div className="signlang_detection-mini-card">
+                  <span>Recognition</span>
+                  <strong>{progress > 0 ? `${progress}%` : "Waiting"}</strong>
+                </div>
               </div>
             </div>
 
-            <Webcam audio={false} ref={webcamRef} className="signlang_webcam" />
-            <canvas ref={canvasRef} className="signlang_canvas" />
+            <div
+              className={`signlang_detection-layout ${
+                mode === "practice" ? "practice-layout" : "translate-layout"
+              }`}
+            >
+              <div className="signlang_detection-stage-card">
+                <div className="signlang_detection-card-head">
+                  <div>
+                    <span className="signlang_detection-card-kicker">Camera feed</span>
+                    <h2>Your live session</h2>
+                  </div>
 
-            <div className="signlang_data-container">
-              <button onClick={enableCam}>{webcamRunning ? "Stop" : "Start"}</button>
+                  <div
+                    className={`signlang_detection-live-badge ${
+                      webcamRunning ? "is-live" : ""
+                    }`}
+                  >
+                    <span />
+                    {webcamRunning ? "Live" : "Idle"}
+                  </div>
+                </div>
 
-              <div className="signlang_data">
-                <p className="gesture_output">
-                  {gestureOutput ? `Recognized sign: ${gestureOutput}` : "No sign detected yet."}
-                </p>
+                <div className="signlang_detection-stage">
+                  <Webcam
+                    audio={false}
+                    ref={webcamRef}
+                    className="signlang_webcam"
+                  />
+                  <canvas ref={canvasRef} className="signlang_canvas" />
+                </div>
 
-                {mode === "practice" && matchMsg ? (
-                  <p style={{ marginTop: 10, fontWeight: 700 }}>{matchMsg}</p>
-                ) : null}
-
-                {progress > 0 && mode === "practice" ? <ProgressBar progress={progress} /> : null}
+                <div className="signlang_detection-controls">
+                  <button
+                    className={`signlang_detection-main-btn ${
+                      webcamRunning ? "is-stop" : "is-start"
+                    }`}
+                    onClick={enableCam}
+                  >
+                    {webcamRunning ? "Stop session" : "Start session"}
+                  </button>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {mode === "practice" && (
-            <div className="signlang_imagelist-container">
-              <h2 className="gradient__text">Practice sign</h2>
-              <div className="signlang_image-div">
-                {currentImage ? (
-                  <>
-                    <img src={currentImage.url} alt={`img ${currentImage.id}`} />
-                    <p>
-                      Do the sign for: <b>{currentImage.sign || currentImage.name}</b>
+              <div className="signlang_detection-side">
+                <div className="signlang_detection-info-card">
+                  <div className="signlang_detection-card-head">
+                    <div>
+                      <span className="signlang_detection-card-kicker">Recognition</span>
+                      <h2>Live result</h2>
+                    </div>
+                  </div>
+
+                  <div className="signlang_detection-result-box">
+                    <p className="gesture_output">
+                      {gestureOutput
+                        ? `Recognized sign: ${gestureOutput}`
+                        : "No sign detected yet."}
                     </p>
-                  </>
-                ) : (
-                  <h3 className="gradient__text">Click on Start to practice with images.</h3>
+
+                    {mode === "practice" && matchMsg ? (
+                      <p className="signlang_detection-match">{matchMsg}</p>
+                    ) : null}
+                  </div>
+
+                  {progress > 0 && mode === "practice" ? (
+                    <div className="signlang_detection-progress-wrap">
+                      <span>Confidence</span>
+                      <ProgressBar progress={progress} />
+                    </div>
+                  ) : null}
+                </div>
+
+                {mode === "practice" && (
+                  <div className="signlang_detection-practice-card">
+                    <div className="signlang_detection-card-head">
+                      <div>
+                        <span className="signlang_detection-card-kicker">Practice prompt</span>
+                        <h2>Current sign to perform</h2>
+                      </div>
+                    </div>
+
+                    <div className="signlang_image-div">
+                      {currentImage ? (
+                        <>
+                          <div className="signlang_detection-practice-image-wrap">
+                            <img
+                              src={currentImage.url}
+                              alt={`img ${currentImage.id}`}
+                            />
+                          </div>
+
+                          <p className="signlang_detection-practice-text">
+                            Do the sign for:{" "}
+                            <b>{currentImage.sign || currentImage.name}</b>
+                          </p>
+                        </>
+                      ) : (
+                        <div className="signlang_detection-practice-empty">
+                          <h3>Click on Start to practice with images.</h3>
+                          <p>
+                            Once the session starts, a random sign prompt will appear
+                            here every few seconds.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
-          )}
-        </>
-      ) : (
-        <div className="signlang_detection_notLoggedIn">
-          <h1 className="gradient__text">Please Login !</h1>
-          <img src={DisplayImg} alt="diplay-img" />
-          <p>Please login to test this detection feature.</p>
-        </div>
-      )}
-    </div>
+          </>
+        ) : (
+          <div className="signlang_detection_notLoggedIn">
+            <div className="signlang_detection_login-card">
+              <span className="signlang_detection-pill">Restricted feature</span>
+              <h1>Please login</h1>
+              <p>Please login to test this detection feature.</p>
+              <img src={DisplayImg} alt="display-img" />
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 };
 

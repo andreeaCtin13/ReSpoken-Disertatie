@@ -10,5 +10,6 @@
   --color-footer: #161028;
   --color-blog: #042c54;
   --color-text: #e5acf6;
-  --color-subtext: #f07458;
+  --color-subtext: rgb(234, 157, 43);
+  --color-hamburger-menu:rgb(255, 174, 24);
 }

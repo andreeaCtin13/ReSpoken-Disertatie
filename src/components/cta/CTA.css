@@ -1,59 +1,173 @@
-.signlang_cta{
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 2rem;
-    margin: 4rem;
-    border-radius: 1rem;
-    background: var(--gradient-bar);
+.signlang_cta-section {
+  width: 100%;
+  padding: 2rem 0 5rem;
+}
+
+.signlang_cta {
+  position: relative;
+  width: min(100%, 86rem);
+  margin: 0 auto;
+  padding: 3rem 3rem;
+  display: grid;
+  grid-template-columns: 1.5fr auto;
+  align-items: center;
+  gap: 2rem;
+  border-radius: 2rem;
+  overflow: hidden;
+
+  border: none;
+  /* gradient mult mai dark */
+  background: linear-gradient(
+    135deg,
+    #6a3ce8 0%,
+    #b75fa4 45%,
+    #e0875d 100%
+  );
+
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+/* layer pentru contrast mai bun */
+.signlang_cta::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background: linear-gradient(
+    90deg,
+    rgba(0,0,0,0.35) 0%,
+    rgba(0,0,0,0.2) 40%,
+    rgba(0,0,0,0) 100%
+  );
+  pointer-events:none;
+}
+
+/* CONTENT */
+
+.signlang_cta-content{
+  position:relative;
+  z-index:1;
+  max-width:46rem;
+}
+
+.signlang_cta-badge{
+  display:inline-block;
+  margin-bottom:1rem;
+  padding:0.45rem 0.9rem;
+
+  border-radius:999px;
+  background:rgba(255,255,255,0.12);
+
+  border:1px solid rgba(255,255,255,0.15);
+
+  color:#ffffff;
+  font-size:0.85rem;
+  font-weight:600;
+  letter-spacing:0.03em;
 }
 
 .signlang_cta-content h3{
-    font-family: var(--font-family);
-    font-size: 24px;
-    line-height: 45px;
-    font-weight: 800;
+  margin:0;
+  font-family:var(--font-family);
+  font-size:clamp(2rem,4vw,3.2rem);
+  line-height:1.05;
+  font-weight:800;
+
+  color:#ffffff;
 }
 
-.signlang_cta-button button {
-    background: #000;
-    color: #fff;
-    font-family: var(--font-family);
-    font-weight: 700;
-    font-size: 18px;
-    line-height: 30px;
-    padding: 0.5rem 1rem;
-    border-radius: 2rem;
+.signlang_cta-content p{
+  margin-top:1rem;
 
-    border: none;
-    outline: none;
-    cursor: pointer;
-    min-width: 150px;
+  font-family:var(--font-family);
+  font-size:1.05rem;
+  line-height:1.8;
+
+  color:rgba(255,255,255,0.85);
 }
 
+/* BUTTON */
 
-@media screen and (max-width: 700px) {
-    .signlang_cta {
-        flex-direction: column;
-    }
-
-    .signlang_cta-button {
-        margin: 2rem 0 0;
-    }
+.signlang_cta-button{
+  position:relative;
+  z-index:1;
 }
 
-@media screen and (max-width: 550px) {
-    .signlang_cta {
-        margin: 4rem 2rem;
-    }
+.signlang_cta-link{
+  display:inline-flex;
+  align-items:center;
+  gap:0.7rem;
 
-    .signlang_cta-content h3 {
-        font-size: 20px;
-        line-height: 30px;
-    }
+  padding:1rem 1.6rem;
 
-    .signlang_cta-button button {
-        font-size: 14px;
-        line-height: 28px;
-    }
+  border-radius:999px;
+
+  text-decoration:none;
+
+  font-family:var(--font-family);
+  font-size:1rem;
+  font-weight:700;
+
+  color:#fff;
+
+  background:#09051a;
+
+  border:1px solid rgba(255,255,255,0.08);
+
+  box-shadow:
+    0 10px 25px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+
+  transition:all 0.25s ease;
+}
+
+.signlang_cta-link:hover{
+  transform:translateY(-3px);
+  box-shadow:
+    0 18px 40px rgba(0,0,0,0.45),
+    0 0 20px rgba(150,120,255,0.25);
+
+  background:#140b2c;
+}
+
+.signlang_cta-link svg{
+  width:18px;
+  height:18px;
+  transition:transform 0.25s ease;
+}
+
+.signlang_cta-link:hover svg{
+  transform:translateX(4px);
+}
+
+/* RESPONSIVE */
+
+@media screen and (max-width:980px){
+
+  .signlang_cta{
+    grid-template-columns:1fr;
+    padding:2.5rem 2rem;
+  }
+
+  .signlang_cta-button{
+    margin-top:1rem;
+  }
+
+}
+
+@media screen and (max-width:700px){
+
+  .signlang_cta{
+    padding:2rem 1.5rem;
+  }
+
+  .signlang_cta-content h3{
+    font-size:2rem;
+  }
+
+  .signlang_cta-content p{
+    font-size:0.95rem;
+  }
+
 }
