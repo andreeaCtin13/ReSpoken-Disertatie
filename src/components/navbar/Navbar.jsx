@@ -52,7 +52,7 @@ const Navbar = ({ notifyMsg }) => {
         {/* DESKTOP LINKS */}
         <div className="signlang_navlinks_container">
           <p>
-            <NavLink to="/home" className={navClass}>
+            <NavLink to="/" className={navClass}>
               Home
             </NavLink>
           </p>
@@ -109,7 +109,7 @@ const Navbar = ({ notifyMsg }) => {
           <div className="signlang__navbar-menu_container scale-up-center">
             <div className="signlang__navbar-menu_container-links">
               <p>
-                <Link to="/home" onClick={() => setToggle(false)}>
+                <Link to="/" onClick={() => setToggle(false)}>
                   Home
                 </Link>
               </p>

@@ -33,7 +33,7 @@ function App() {
     <div className="App">
       <Routes>
         <Route
-          path="/home"
+          path="/"
           element={
             <Layout notifyMsg={notifyMsg}>
               <Home />

@@ -17,6 +17,7 @@ let startTime = null;
 const PRACTICE_DETECT_THRESHOLD = 0.15;
 const MATCH_THRESHOLD = 0.20;
 const BASE_POINTS = 50;
+const MOBILE_BREAKPOINT = 800;
 
 const normalizeSign = (s) => (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
@@ -31,12 +32,10 @@ const DetectCore = ({ mode = "translate" }) => {
   const [webcamRunning, setWebcamRunning] = useState(false);
   const [gestureOutput, setGestureOutput] = useState("");
   const [progress, setProgress] = useState(0);
-
   const [detectedData, setDetectedData] = useState([]);
 
   const practiceCountsRef = useRef(new Map());
   const practiceStatsRef = useRef({ attempts: 0, matches: 0, totalPoints: 0 });
-
   const lastAttemptAtRef = useRef(0);
 
   const user = useSelector((state) => state.auth?.user);
@@ -45,6 +44,18 @@ const DetectCore = ({ mode = "translate" }) => {
 
   const [currentImage, setCurrentImage] = useState(null);
   const [matchMsg, setMatchMsg] = useState("");
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    typeof window !== "undefined" ? window.innerWidth <= MOBILE_BREAKPOINT : false
+  );
+
+  useEffect(() => {
+    const onResize = () => {
+      setIsMobileViewport(window.innerWidth <= MOBILE_BREAKPOINT);
+    };
+
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => {
     let intervalId;
@@ -191,7 +202,10 @@ const DetectCore = ({ mode = "translate" }) => {
       if (mode === "practice") {
         const now = Date.now();
 
-        if (now - lastAttemptAtRef.current > 400 && score >= PRACTICE_DETECT_THRESHOLD) {
+        if (
+          now - lastAttemptAtRef.current > 400 &&
+          score >= PRACTICE_DETECT_THRESHOLD
+        ) {
           lastAttemptAtRef.current = now;
 
           practiceStatsRef.current = {
@@ -225,7 +239,9 @@ const DetectCore = ({ mode = "translate" }) => {
               };
               setMatchMsg(`✅ MATCH: ${targetRaw} (${Math.round(score * 100)}%)`);
             } else {
-              setMatchMsg(`❌ Detected: ${gestureName} (${Math.round(score * 100)}%)`);
+              setMatchMsg(
+                `❌ Detected: ${gestureName} (${Math.round(score * 100)}%)`
+              );
             }
           } else {
             setMatchMsg(`Detected: ${gestureName} (${Math.round(score * 100)}%)`);
@@ -370,6 +386,334 @@ const DetectCore = ({ mode = "translate" }) => {
       ? "Use your camera to detect gestures live and save your most recognized signs."
       : "Follow the sign prompt, perform the gesture and track your match confidence in real time.";
 
+  const isMobilePractice = mode === "practice" && isMobileViewport;
+
+  const renderRecognitionCard = (compact = false) => (
+    <div className="signlang_detection-info-card signlang_detection-info-card--highlight">
+      <div
+        className={`signlang_detection-card-head ${
+          compact ? "signlang_detection-card-head--compact" : ""
+        }`}
+      >
+        <div>
+          <span className="signlang_detection-card-kicker">Recognition</span>
+          <h2>Live result</h2>
+        </div>
+      </div>
+
+      <div className="signlang_detection-result-box signlang_detection-result-box--big">
+        <div>
+          <span className="signlang_detection-result-label">Translated sign</span>
+          <p className="gesture_output gesture_output--large">
+            {gestureOutput ? gestureOutput : "No sign detected yet."}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderTranslateLayout = () => (
+    <>
+      <div className="signlang_detection-hero">
+        <div className="signlang_detection-hero-copy">
+          <span className="signlang_detection-pill">{modeLabel}</span>
+          <h1>{modeTitle}</h1>
+          <p>{modeText}</p>
+        </div>
+
+        <div className="signlang_detection-hero-mini">
+          <div className="signlang_detection-mini-card">
+            <span>Status</span>
+            <strong>{webcamRunning ? "Session active" : "Ready to start"}</strong>
+          </div>
+
+          <div className="signlang_detection-mini-card">
+            <span>Recognition</span>
+            <strong>{progress > 0 ? `${progress}%` : "Waiting"}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div className="signlang_detection-layout translate-layout">
+        <div className="signlang_detection-stage-card">
+          <div className="signlang_detection-card-head">
+            <div>
+              <span className="signlang_detection-card-kicker">Camera feed</span>
+              <h2>Your live session</h2>
+            </div>
+
+            <div
+              className={`signlang_detection-live-badge ${
+                webcamRunning ? "is-live" : ""
+              }`}
+            >
+              <span />
+              {webcamRunning ? "Live" : "Idle"}
+            </div>
+          </div>
+
+          <div className="signlang_detection-stage signlang_detection-stage--compact">
+            <Webcam
+              audio={false}
+              ref={webcamRef}
+              className="signlang_webcam"
+            />
+            <canvas ref={canvasRef} className="signlang_canvas" />
+          </div>
+
+          <div className="signlang_detection-controls">
+            <button
+              className={`signlang_detection-main-btn ${
+                webcamRunning ? "is-stop" : "is-start"
+              }`}
+              onClick={enableCam}
+            >
+              {webcamRunning ? "Stop session" : "Start session"}
+            </button>
+          </div>
+        </div>
+
+        <div className="signlang_detection-side">{renderRecognitionCard()}</div>
+      </div>
+    </>
+  );
+
+  const renderPracticeDesktopLayout = () => (
+    <>
+      <div className="signlang_detection-hero">
+        <div className="signlang_detection-hero-copy">
+          <span className="signlang_detection-pill">{modeLabel}</span>
+          <h1>{modeTitle}</h1>
+          <p>{modeText}</p>
+        </div>
+
+        <div className="signlang_detection-hero-mini">
+          <div className="signlang_detection-mini-card">
+            <span>Status</span>
+            <strong>{webcamRunning ? "Session active" : "Ready to start"}</strong>
+          </div>
+
+          <div className="signlang_detection-mini-card">
+            <span>Recognition</span>
+            <strong>{progress > 0 ? `${progress}%` : "Waiting"}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div className="signlang_detection-layout practice-layout">
+        <div className="signlang_detection-stage-card">
+          <div className="signlang_detection-card-head">
+            <div>
+              <span className="signlang_detection-card-kicker">Camera feed</span>
+              <h2>Your live session</h2>
+            </div>
+
+            <div
+              className={`signlang_detection-live-badge ${
+                webcamRunning ? "is-live" : ""
+              }`}
+            >
+              <span />
+              {webcamRunning ? "Live" : "Idle"}
+            </div>
+          </div>
+
+          <div className="signlang_detection-stage signlang_detection-stage--compact">
+            <Webcam
+              audio={false}
+              ref={webcamRef}
+              className="signlang_webcam"
+            />
+            <canvas ref={canvasRef} className="signlang_canvas" />
+          </div>
+
+          {progress > 0 ? (
+            <div className="signlang_detection-stage-progress">
+              <span>Confidence</span>
+              <ProgressBar progress={progress} />
+            </div>
+          ) : null}
+
+          <div className="signlang_detection-controls">
+            <button
+              className={`signlang_detection-main-btn ${
+                webcamRunning ? "is-stop" : "is-start"
+              }`}
+              onClick={enableCam}
+            >
+              {webcamRunning ? "Stop session" : "Start session"}
+            </button>
+          </div>
+        </div>
+
+        <div className="signlang_detection-side">
+          {renderRecognitionCard()}
+
+          <div className="signlang_detection-feedback-card">
+            <div className="signlang_detection-card-head signlang_detection-card-head--compact">
+              <div>
+                <span className="signlang_detection-card-kicker">Feedback</span>
+                <h2>Match status</h2>
+              </div>
+            </div>
+
+            <div className="signlang_detection-feedback-box">
+              <p className="signlang_detection-match signlang_detection-match--standalone">
+                {matchMsg || "Perform the prompted sign to see feedback here."}
+              </p>
+            </div>
+          </div>
+
+          <div className="signlang_detection-practice-card">
+            <div className="signlang_detection-card-head">
+              <div>
+                <span className="signlang_detection-card-kicker">Practice prompt</span>
+                <h2>Current sign to perform</h2>
+              </div>
+            </div>
+
+            <div className="signlang_image-div">
+              {currentImage ? (
+                <div className="signlang_detection-practice-split">
+                  <div className="signlang_detection-practice-image-wrap">
+                    <img src={currentImage.url} alt={`img ${currentImage.id}`} />
+                  </div>
+
+                  <div className="signlang_detection-practice-copy">
+                    <p className="signlang_detection-practice-label">
+                      Do the sign for
+                    </p>
+                    <p className="signlang_detection-practice-text">
+                      <b>{currentImage.sign || currentImage.name}</b>
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="signlang_detection-practice-empty">
+                  <h3>Click on Start to practice with images.</h3>
+                  <p>
+                    Once the session starts, a random sign prompt will appear here
+                    every few seconds.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
+  const renderPracticeMobileLayout = () => {
+    if (!webcamRunning) {
+      return (
+        <div className="signlang_detection-mobile-startonly">
+          <div className="signlang_detection-mobile-start-card">
+            <span className="signlang_detection-pill">Practice mode</span>
+            <h1>Practice with guided signs</h1>
+            <p>
+              Start the session and the practice screen will open below the navbar.
+            </p>
+
+            <button
+              className="signlang_detection-main-btn is-start signlang_detection-mobile-start-btn"
+              onClick={enableCam}
+            >
+              Start session
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="signlang_detection-mobile-practice-live">
+        <div className="signlang_detection-mobile-practice-stage">
+          <div className="signlang_detection-mobile-practice-stage-inner">
+            {currentImage ? (
+              <>
+                <div className="signlang_detection-mobile-practice-image">
+                  <img src={currentImage.url} alt={`img ${currentImage.id}`} />
+                </div>
+
+                <div className="signlang_detection-mobile-practice-overlay-copy">
+                  <span className="signlang_detection-mobile-practice-overlay-label">
+                    Do this sign
+                  </span>
+                  <p className="signlang_detection-mobile-practice-overlay-text">
+                    {currentImage.sign || currentImage.name}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="signlang_detection-mobile-practice-empty">
+                <h3>Preparing practice prompt...</h3>
+                <p>A sign prompt will appear here in a moment.</p>
+              </div>
+            )}
+
+            <div className="signlang_detection-mobile-self-preview">
+              <div className="signlang_detection-mobile-self-preview-shell">
+                <Webcam
+                  audio={false}
+                  ref={webcamRef}
+                  className="signlang_webcam"
+                />
+                <canvas ref={canvasRef} className="signlang_canvas" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="signlang_detection-mobile-live-meta">
+          <div className="signlang_detection-mini-strip">
+            <div className="signlang_detection-mini-strip-item">
+              <span>Status</span>
+              <strong>Session active</strong>
+            </div>
+            <div className="signlang_detection-mini-strip-item">
+              <span>Recognition</span>
+              <strong>{progress > 0 ? `${progress}%` : "Waiting"}</strong>
+            </div>
+          </div>
+
+          {renderRecognitionCard(true)}
+
+          <div className="signlang_detection-feedback-card">
+            <div className="signlang_detection-card-head signlang_detection-card-head--compact">
+              <div>
+                <span className="signlang_detection-card-kicker">Feedback</span>
+                <h2>Match status</h2>
+              </div>
+            </div>
+
+            <div className="signlang_detection-feedback-box">
+              <p className="signlang_detection-match signlang_detection-match--standalone">
+                {matchMsg || "Perform the prompted sign to see feedback here."}
+              </p>
+            </div>
+          </div>
+
+          {progress > 0 ? (
+            <div className="signlang_detection-stage-progress">
+              <span>Confidence</span>
+              <ProgressBar progress={progress} />
+            </div>
+          ) : null}
+
+          <div className="signlang_detection-controls signlang_detection-controls--mobile-practice">
+            <button
+              className="signlang_detection-main-btn is-stop signlang_detection-mobile-stop-btn"
+              onClick={enableCam}
+            >
+              Stop session
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <section className="signlang_detection-page">
       <div className="signlang_detection-bg signlang_detection-bg--one" />
@@ -377,138 +721,11 @@ const DetectCore = ({ mode = "translate" }) => {
 
       <div className="signlang_detection-container">
         {accessToken ? (
-          <>
-            <div className="signlang_detection-hero">
-              <div className="signlang_detection-hero-copy">
-                <span className="signlang_detection-pill">{modeLabel}</span>
-                <h1>{modeTitle}</h1>
-                <p>{modeText}</p>
-              </div>
-
-              <div className="signlang_detection-hero-mini">
-                <div className="signlang_detection-mini-card">
-                  <span>Status</span>
-                  <strong>{webcamRunning ? "Session active" : "Ready to start"}</strong>
-                </div>
-
-                <div className="signlang_detection-mini-card">
-                  <span>Recognition</span>
-                  <strong>{progress > 0 ? `${progress}%` : "Waiting"}</strong>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className={`signlang_detection-layout ${
-                mode === "practice" ? "practice-layout" : "translate-layout"
-              }`}
-            >
-              <div className="signlang_detection-stage-card">
-                <div className="signlang_detection-card-head">
-                  <div>
-                    <span className="signlang_detection-card-kicker">Camera feed</span>
-                    <h2>Your live session</h2>
-                  </div>
-
-                  <div
-                    className={`signlang_detection-live-badge ${
-                      webcamRunning ? "is-live" : ""
-                    }`}
-                  >
-                    <span />
-                    {webcamRunning ? "Live" : "Idle"}
-                  </div>
-                </div>
-
-                <div className="signlang_detection-stage">
-                  <Webcam
-                    audio={false}
-                    ref={webcamRef}
-                    className="signlang_webcam"
-                  />
-                  <canvas ref={canvasRef} className="signlang_canvas" />
-                </div>
-
-                <div className="signlang_detection-controls">
-                  <button
-                    className={`signlang_detection-main-btn ${
-                      webcamRunning ? "is-stop" : "is-start"
-                    }`}
-                    onClick={enableCam}
-                  >
-                    {webcamRunning ? "Stop session" : "Start session"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="signlang_detection-side">
-                <div className="signlang_detection-info-card">
-                  <div className="signlang_detection-card-head">
-                    <div>
-                      <span className="signlang_detection-card-kicker">Recognition</span>
-                      <h2>Live result</h2>
-                    </div>
-                  </div>
-
-                  <div className="signlang_detection-result-box">
-                    <p className="gesture_output">
-                      {gestureOutput
-                        ? `Recognized sign: ${gestureOutput}`
-                        : "No sign detected yet."}
-                    </p>
-
-                    {mode === "practice" && matchMsg ? (
-                      <p className="signlang_detection-match">{matchMsg}</p>
-                    ) : null}
-                  </div>
-
-                  {progress > 0 && mode === "practice" ? (
-                    <div className="signlang_detection-progress-wrap">
-                      <span>Confidence</span>
-                      <ProgressBar progress={progress} />
-                    </div>
-                  ) : null}
-                </div>
-
-                {mode === "practice" && (
-                  <div className="signlang_detection-practice-card">
-                    <div className="signlang_detection-card-head">
-                      <div>
-                        <span className="signlang_detection-card-kicker">Practice prompt</span>
-                        <h2>Current sign to perform</h2>
-                      </div>
-                    </div>
-
-                    <div className="signlang_image-div">
-                      {currentImage ? (
-                        <>
-                          <div className="signlang_detection-practice-image-wrap">
-                            <img
-                              src={currentImage.url}
-                              alt={`img ${currentImage.id}`}
-                            />
-                          </div>
-
-                          <p className="signlang_detection-practice-text">
-                            Do the sign for:{" "}
-                            <b>{currentImage.sign || currentImage.name}</b>
-                          </p>
-                        </>
-                      ) : (
-                        <div className="signlang_detection-practice-empty">
-                          <h3>Click on Start to practice with images.</h3>
-                          <p>
-                            Once the session starts, a random sign prompt will appear
-                            here every few seconds.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
+          mode === "translate"
+            ? renderTranslateLayout()
+            : isMobilePractice
+            ? renderPracticeMobileLayout()
+            : renderPracticeDesktopLayout()
         ) : (
           <div className="signlang_detection_notLoggedIn">
             <div className="signlang_detection_login-card">
