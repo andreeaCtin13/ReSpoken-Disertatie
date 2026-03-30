@@ -148,7 +148,6 @@
 .signlang_detection_login-card::before,
 .signlang_detection-mobile-start-card::before {
   content: "";
-  position: absolute;
   inset: 0 0 auto 0;
   height: 0.125rem;
   background: linear-gradient(90deg, #925fff 0%, #d58ece 55%, #f2a16f 100%);
@@ -562,8 +561,7 @@
 }
 
 .signlang_detection-mobile-practice-image {
-  position: absolute;
-  inset: 0;
+  height:fit-content;
 }
 
 .signlang_detection-mobile-practice-image img {
@@ -805,7 +803,7 @@
   }
 
   .signlang_detection-mobile-practice-stage-inner {
-    min-height: calc(100vh - 10.5rem);
+    min-height: 40rem;
     border-radius: 1.25rem;
   }
 
@@ -829,8 +827,8 @@
 
 @media screen and (max-width: 560px) {
   .signlang_detection-page {
-    padding-top: 6.1rem;
-    padding-bottom: 2rem;
+    padding-top: 2.4rem;
+    padding-bottom: 1.25rem;
   }
 
   .signlang_detection-mobile-startonly {
@@ -856,31 +854,41 @@
   .signlang_detection-card-head {
     flex-direction: column;
     align-items: flex-start;
+    margin-bottom: 0.7rem;
+  }
+
+  .signlang_detection-mobile-practice-live,
+  .signlang_detection-mobile-live-meta,
+  .signlang_detection-side {
+    gap: 0.75rem;
   }
 
   .signlang_detection-mobile-practice-stage-inner {
-    min-height: calc(100vh - 9.8rem);
-    border-radius: 1.15rem;
+    min-height: fit-content;
+    border-radius: 1rem;
   }
 
   .signlang_detection-mobile-practice-empty {
-    min-height: calc(100vh - 9.8rem);
+    min-height: calc(100vh - 16.5rem);
   }
 
   .signlang_detection-mobile-self-preview {
-    width: 5.6rem;
-    top: 0.7rem;
-    right: 0.7rem;
+    width: 5rem;
+    top: 0.6rem;
+    right: 0.6rem;
   }
 
   .signlang_detection-mobile-self-preview-shell,
   .signlang_detection-mobile-self-preview-shell .signlang_webcam,
   .signlang_detection-mobile-self-preview-shell .signlang_canvas {
-    border-radius: 0.9rem;
+    border-radius: 0.8rem;
   }
 
   .signlang_detection-mobile-practice-overlay-copy {
-    padding: 0.78rem 0.85rem;
+    left: 0.65rem;
+    right: 0.65rem;
+    bottom: 0.65rem;
+    padding: 0.7rem 0.8rem;
     border-radius: 0.9rem;
   }
 
@@ -889,11 +897,13 @@
   }
 
   .signlang_detection-mobile-practice-overlay-text {
-    font-size: 1rem;
+    font-size: 0.95rem;
+    line-height: 1.2;
   }
 
   .signlang_detection-mini-strip {
     grid-template-columns: 1fr;
+    gap: 0.65rem;
   }
 
   .signlang_detection-main-btn {
@@ -903,5 +913,27 @@
   .signlang_detection-match--standalone {
     font-size: 0.9rem;
     line-height: 1.5;
+  }
+
+  .signlang_detection-info-card,
+  .signlang_detection-feedback-card {
+    padding: 1rem;
+    border-radius: 1.1rem;
+  }
+
+  .signlang_detection-result-box--big,
+  .signlang_detection-feedback-box {
+    padding: 0.8rem 0.9rem;
+  }
+
+  /* ascunde DO THIS SIGN si STATUS doar pe mobil */
+  .signlang_detection-mobile-live-meta .signlang_detection-mini-strip-item:nth-child(1),
+  .signlang_detection-mobile-live-meta .signlang_detection-mini-strip-item:nth-child(2) {
+    display: none;
+  }
+
+  /* compactare imagine */
+  .signlang_detection-mobile-practice-image img {
+    height: 68%;
   }
 }

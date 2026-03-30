@@ -732,7 +732,6 @@ const DetectCore = ({ mode = "translate" }) => {
               <span className="signlang_detection-pill">Restricted feature</span>
               <h1>Please login</h1>
               <p>Please login to test this detection feature.</p>
-              <img src={DisplayImg} alt="display-img" />
             </div>
           </div>
         )}
