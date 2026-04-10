@@ -15,7 +15,7 @@ const Navbar = ({ notifyMsg }) => {
 
   const isLoggedIn = useMemo(() => !!accessToken && !!user, [accessToken, user]);
   const welcomedRef = useRef(false);
-
+  console.log('user:',user);
   useEffect(() => {
     if (isLoggedIn && !welcomedRef.current) {
       welcomedRef.current = true;

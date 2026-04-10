@@ -23,6 +23,7 @@ export const login = () => async (dispatch) => {
       name: res.user.displayName,
       photoURL: res.user.photoURL,
       userId: res.user.uid,
+      email:  res.user.email
     };
 
     Cookies.set("sign-language-ai-access-token", accessToken, { expires: 2 });

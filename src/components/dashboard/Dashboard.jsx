@@ -112,9 +112,9 @@ const Dashboard = () => {
                 show stats, top signs and leaderboard information.
               </p>
 
-              {error ? (
+              {/* {error ? (
                 <p className="signlang__nodata-debug">Debug: {String(error)}</p>
-              ) : null}
+              ) : null} */}
             </div>
           </div>
         ) : (
