@@ -1,10 +1,10 @@
-// src/redux/reducer/authReducer.js
 import {
   LOAD_PROF,
   LOGIN_FAIL,
   LOGIN_REQ,
   LOGIN_SUCCESS,
   LOGOUT,
+  LOAD_SESSION,
 } from "../action-types";
 
 const initialState = {
@@ -36,6 +36,13 @@ export const authReducer = (state = initialState, action) => {
         user: action.payload,
       };
 
+    case LOAD_SESSION:
+      return {
+        ...state,
+        accessToken: action.payload.accessToken,
+        user: action.payload.user,
+      };
+
     case LOGIN_FAIL:
       return {
         ...state,
@@ -48,6 +55,8 @@ export const authReducer = (state = initialState, action) => {
         ...state,
         accessToken: null,
         user: null,
+        loading: false,
+        error: null,
       };
 
     default:

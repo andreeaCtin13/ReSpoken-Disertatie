@@ -10,7 +10,6 @@ import { SignImageData } from "../data/SignImageData";
 import { useDispatch, useSelector } from "react-redux";
 import { addSignData } from "../redux/actions/signdataaction";
 import ProgressBar from "../components/Detect/ProgressBar/ProgressBar";
-import DisplayImg from "../assests/displayGif.gif";
 
 let startTime = null;
 
@@ -213,6 +212,19 @@ const DetectCore = ({ mode = "translate" }) => {
 
       setGestureOutput(gestureName);
       setProgress(Math.round(score * 100));
+
+      // WIDGET
+      if (gestureName && score > 0.5) {
+        window.postMessage(
+          {
+            source: "respoken",
+            type: "translation",
+            text: gestureName,
+            score: score,
+          },
+          "*"
+        );
+      }
 
       if (liveMode !== "practice") {
         setDetectedData((prev) => [

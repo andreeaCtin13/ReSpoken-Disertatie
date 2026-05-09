@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "sign-language-ai"
-  }
+    "default": "disertatie-d7c4a"
+  },
+  "targets": {},
+  "etags": {}
 }

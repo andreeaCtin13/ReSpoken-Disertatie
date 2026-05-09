@@ -3,6 +3,7 @@ export const LOGIN_SUCCESS="LOGIN_SUCCESS";
 export const LOGIN_FAIL="LOGIN_FAIL";
 export const LOGOUT = "LOGOUT";
 export const LOAD_PROF = "LOAD_PROF";
+export const LOAD_SESSION = "LOAD_SESSION";
 
 export const ADD_SIGN_DATA_REQ="ADD_SIGN_DATA_REQ";
 export const ADD_SIGN_DATA_SUCCESS="ADD_SIGN_DATA_SUCCESS";

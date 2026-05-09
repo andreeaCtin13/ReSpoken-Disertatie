@@ -3,7 +3,15 @@ import "./Navbar.css";
 import { Link, NavLink } from "react-router-dom";
 import { RiMenu3Line, RiCloseLine } from "react-icons/ri";
 import { useDispatch, useSelector } from "react-redux";
-import { login, logout } from "../../redux/actions/authaction";
+import {
+  login,
+  logout,
+  loadSessionFromCookies,
+} from "../../redux/actions/authaction";
+
+// 👉 pune aici un default avatar (poți schimba linkul)
+const DEFAULT_AVATAR =
+  "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
 const Navbar = ({ notifyMsg }) => {
   const [toggle, setToggle] = useState(false);
@@ -15,11 +23,18 @@ const Navbar = ({ notifyMsg }) => {
 
   const isLoggedIn = useMemo(() => !!accessToken && !!user, [accessToken, user]);
   const welcomedRef = useRef(false);
-  console.log('user:',user);
+
+  useEffect(() => {
+    dispatch(loadSessionFromCookies());
+  }, [dispatch]);
+
   useEffect(() => {
     if (isLoggedIn && !welcomedRef.current) {
       welcomedRef.current = true;
-      notifyMsg?.("success", `Welcome! ${user?.name}, You Logged in Successfully`);
+      notifyMsg?.(
+        "success",
+        `Welcome! ${user?.name}, You Logged in Successfully`
+      );
     }
 
     if (!isLoggedIn) {
@@ -38,17 +53,23 @@ const Navbar = ({ notifyMsg }) => {
     dispatch(login());
   };
 
-  const handleLogout = () => {
-    dispatch(logout());
-    notifyMsg?.("success", "Logged Out Successfully !");
-  };
+ const handleLogout = async () => {
+  await dispatch(logout());
+  notifyMsg?.("success", "Logged Out Successfully !");
+  setToggle(false);
+};
 
   const navClass = ({ isActive }) => (isActive ? "nav_active" : undefined);
+
+  // 👉 helper pentru fallback imagine
+  const handleImgError = (e) => {
+    e.target.onerror = null; // previne loop infinit
+    e.target.src = DEFAULT_AVATAR;
+  };
 
   return (
     <nav className="signlang_navbar gradient__bg">
       <div className="singlang_navlinks">
-
         {/* DESKTOP LINKS */}
         <div className="signlang_navlinks_container">
           <p>
@@ -82,14 +103,20 @@ const Navbar = ({ notifyMsg }) => {
         <div className="signlang_auth-data">
           {isLoggedIn ? (
             <>
-              <img src={user?.photoURL} alt="user-icon" />
+              <img
+                src={user?.photoURL || DEFAULT_AVATAR}
+                alt="user-icon"
+                onError={handleImgError}
+              />
               <button onClick={handleLogout}>Logout</button>
             </>
           ) : (
             <button
               onClick={handleLogin}
               disabled={!!loading}
-              style={loading ? { opacity: 0.7, cursor: "not-allowed" } : undefined}
+              style={
+                loading ? { opacity: 0.7, cursor: "not-allowed" } : undefined
+              }
             >
               {loading ? "Logging in..." : "Login"}
             </button>
@@ -138,14 +165,15 @@ const Navbar = ({ notifyMsg }) => {
             <div className="signlang__navbar-menu_container-links-authdata">
               {isLoggedIn ? (
                 <>
-                  <img src={user?.photoURL} alt="user-icon" />
+                  <img
+                    src={user?.photoURL || DEFAULT_AVATAR}
+                    alt="user-icon"
+                    onError={handleImgError}
+                  />
                   <button onClick={handleLogout}>Logout</button>
                 </>
               ) : (
-                <button
-                  onClick={handleLogin}
-                  disabled={!!loading}
-                >
+                <button onClick={handleLogin} disabled={!!loading}>
                   {loading ? "Logging in..." : "Login"}
                 </button>
               )}

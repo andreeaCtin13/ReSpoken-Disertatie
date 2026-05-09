@@ -46,12 +46,12 @@ export const addSignData = (payload) => async (dispatch, getState) => {
 
     const userId =
       payload.userId ||
+      authUser?.userId ||
       authUser?.uid ||
-      authUser?.id ||
-      authUser?.userId;
+      authUser?.id;
 
     if (!userId) {
-      throw new Error("addSignData: userId is missing (auth user not loaded?)");
+      throw new Error("addSignData: userId is missing.");
     }
 
     const signsPerformed = Array.isArray(payload.signsPerformed)
@@ -73,7 +73,11 @@ export const addSignData = (payload) => async (dispatch, getState) => {
       mode: payload.mode || "detect",
       secondsSpent: Number(payload.secondsSpent || 0),
       userId,
-      username: payload.username || authUser?.name || "Unknown",
+      username:
+        payload.username ||
+        authUser?.name ||
+        authUser?.displayName ||
+        "Unknown",
       signsPerformed,
       stats,
     };
@@ -98,13 +102,14 @@ export const addSignData = (payload) => async (dispatch, getState) => {
       );
 
       await updateDoc(userRef, {
+        username: sessionDoc.username,
         practiceAttempts: increment(stats.attempts),
         practiceMatches: increment(stats.matches),
         totalPoints: increment(stats.totalPoints),
       });
     }
 
-    dispatch(getSignData());
+    dispatch(getSignData(userId));
     dispatch(getTopUsers());
   } catch (err) {
     console.error("❌ addSignData failed:", err);
@@ -113,16 +118,20 @@ export const addSignData = (payload) => async (dispatch, getState) => {
 };
 
 // ===================
-// GET SESSIONS FOR CURRENT USER
-// If the user doc was recreated, ignore older orphan sessions
+// GET SESSIONS FOR CURRENT USER ONLY
 // ===================
-export const getSignData = () => async (dispatch, getState) => {
+export const getSignData = (explicitUserId = null) => async (dispatch, getState) => {
   try {
     dispatch({ type: SIGNDATA_LOADING });
 
     const state = getState();
     const user = state.auth?.user;
-    const userId = user?.uid || user?.id || user?.userId;
+
+    const userId =
+      explicitUserId ||
+      user?.userId ||
+      user?.uid ||
+      user?.id;
 
     if (!userId) {
       dispatch({ type: SIGNDATA_SUCCESS, payload: [] });
@@ -132,27 +141,33 @@ export const getSignData = () => async (dispatch, getState) => {
     const userRef = doc(db, "users", userId);
     const userSnap = await getDoc(userRef);
 
-    if (!userSnap.exists()) {
-      dispatch({ type: SIGNDATA_SUCCESS, payload: [] });
-      return;
-    }
-
-    const userData = userSnap.data();
+    const userData = userSnap.exists() ? userSnap.data() : null;
     const userCreatedAtISO = userData?.createdAtISO || null;
+
     const userCreatedAtMs = userCreatedAtISO
       ? new Date(userCreatedAtISO).getTime()
       : 0;
 
-    const q = query(collection(db, "sessions"), where("userId", "==", userId));
+    const q = query(
+      collection(db, "sessions"),
+      where("userId", "==", userId)
+    );
+
     const snap = await getDocs(q);
 
     const list = snap.docs
-      .map((d) => ({ _docId: d.id, ...d.data() }))
+      .map((d) => ({
+        _docId: d.id,
+        ...d.data(),
+      }))
+      .filter((item) => item?.userId === userId)
       .filter((item) => {
         if (!userCreatedAtMs) return true;
+
         const sessionMs = item?.createdAtISO
           ? new Date(item.createdAtISO).getTime()
           : 0;
+
         return sessionMs >= userCreatedAtMs;
       })
       .sort((a, b) => {

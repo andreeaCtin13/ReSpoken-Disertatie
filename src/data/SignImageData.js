@@ -73,7 +73,7 @@ export const SignImageData = [
   { id: 26, sign: "BYE", url: ByeImg },
   { id: 27, sign: "HELLO", url: HelloImg },
   { id: 28, sign: "MEET", url: MeetImg },
-  { id: 29, sign: "THANKYOU", url: ThankYouImg }, // ⚠️ exact cum e în model
+  { id: 29, sign: "THANKYOU", url: ThankYouImg }, 
   { id: 30, sign: "YES", url: YesImg },
   { id: 31, sign: "NO", url: NoImg },
   { id: 32, sign: "DEAF", url: DeafImg },

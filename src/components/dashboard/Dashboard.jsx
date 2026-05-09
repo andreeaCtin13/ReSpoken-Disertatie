@@ -18,11 +18,22 @@ const Dashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { loading: authLoader, accessToken } = useSelector((state) => state.auth || {});
+  const {
+    loading: authLoader,
+    accessToken,
+    user,
+  } = useSelector((state) => state.auth || {});
 
-  const { signDataList = [], loading = false, topUsers = [], error = null } = useSelector(
-    (state) => state.signData || {}
-  );
+  const {
+    signDataList = [],
+    loading = false,
+    topUsers = [],
+    error = null,
+  } = useSelector((state) => state.signData || {});
+
+  const currentUserId = user?.userId || user?.uid || user?.id || null;
+  const displayName = user?.name || user?.displayName || "User";
+  const displayEmail = user?.email || "No email available";
 
   useEffect(() => {
     if (!authLoader && !accessToken) {
@@ -30,15 +41,22 @@ const Dashboard = () => {
       return;
     }
 
-    if (accessToken) {
-      dispatch(getSignData());
+    if (accessToken && currentUserId) {
+      dispatch(getSignData(currentUserId));
       dispatch(getTopUsers());
     }
-  }, [accessToken, authLoader, navigate, dispatch]);
+  }, [accessToken, currentUserId, authLoader, navigate, dispatch]);
+
+  const currentUserSessions = useMemo(() => {
+    return (signDataList || []).filter((session) => {
+      const sessionUserId = session?.userId || session?.uid || session?.id;
+      return sessionUserId === currentUserId;
+    });
+  }, [signDataList, currentUserId]);
 
   const practiceSessions = useMemo(
-    () => (signDataList || []).filter((s) => s?.mode === "practice"),
-    [signDataList]
+    () => currentUserSessions.filter((s) => s?.mode === "practice"),
+    [currentUserSessions]
   );
 
   const flatSigns = useMemo(() => {
@@ -68,19 +86,39 @@ const Dashboard = () => {
     return topFive.reduce((acc, item) => acc + (Number(item.count) || 0), 0);
   }, [topFive]);
 
+  const totalSecondsSpent = useMemo(() => {
+    return practiceSessions.reduce(
+      (acc, item) => acc + (Number(item.secondsSpent) || 0),
+      0
+    );
+  }, [practiceSessions]);
+
+  const totalMinutesSpent = Math.round(totalSecondsSpent / 60);
+
   const currentTopUser = (topUsers || [])[0];
 
   useEffect(() => {
+    console.log("[DASHBOARD] current user =", user);
+    console.log("[DASHBOARD] currentUserId =", currentUserId);
     console.log("[DASHBOARD] signDataList len =", signDataList?.length);
+    console.log("[DASHBOARD] currentUserSessions len =", currentUserSessions?.length);
     console.log("[DASHBOARD] practiceSessions len =", practiceSessions?.length);
     console.log("[DASHBOARD] topUsers len =", topUsers?.length);
     if (error) console.log("[DASHBOARD] error =", error);
-  }, [signDataList, practiceSessions, topUsers, error]);
+  }, [
+    user,
+    currentUserId,
+    signDataList,
+    currentUserSessions,
+    practiceSessions,
+    topUsers,
+    error,
+  ]);
 
   const showNoData =
     !loading &&
     !authLoader &&
-    (signDataList?.length === 0 || practiceSessions.length === 0);
+    (currentUserSessions?.length === 0 || practiceSessions.length === 0);
 
   const getTrophy = (rank) => {
     if (rank === 1) return GoldTrophy;
@@ -105,43 +143,65 @@ const Dashboard = () => {
 
             <div className="signlang__nodata-content">
               <span className="signlang_dashboard-pill">Dashboard</span>
+
+              <h2>Hello, {displayName} 👋</h2>
+              <p>
+                You are currently logged in as <strong>{displayEmail}</strong>.
+              </p>
+
               <h3>No data to display yet</h3>
               <p>
                 Go to Practice and complete a full session: Start, do a few
                 matches, then Stop. Once you save activity, your dashboard will
                 show stats, top signs and leaderboard information.
               </p>
-
-              {/* {error ? (
-                <p className="signlang__nodata-debug">Debug: {String(error)}</p>
-              ) : null} */}
             </div>
           </div>
         ) : (
           <>
             <div className="signlang_dashboard-hero">
               <div className="signlang_dashboard-hero-copy">
-                <span className="signlang_dashboard-pill">Your performance hub</span>
-                <h1>Track your progress, practice patterns and rankings</h1>
+                <span className="signlang_dashboard-pill">
+                  Your performance hub
+                </span>
+
+                <h1>Hello, {displayName} 👋</h1>
+
                 <p>
-                  A clean overview of your sign language activity, most practiced
-                  gestures and community leaderboard.
+                  You are currently logged in as <strong>{displayEmail}</strong>.
+                </p>
+
+                <p>
+                  Track your progress, practice patterns and community rankings.
                 </p>
               </div>
 
               <div className="signlang_dashboard-stats">
                 <div className="signlang_dashboard-stat-card">
-                  <span className="signlang_dashboard-stat-label">Practice sessions</span>
+                  <span className="signlang_dashboard-stat-label">
+                    Practice sessions
+                  </span>
                   <strong>{totalPracticeSessions}</strong>
                 </div>
 
                 <div className="signlang_dashboard-stat-card">
-                  <span className="signlang_dashboard-stat-label">Detected signs</span>
+                  <span className="signlang_dashboard-stat-label">
+                    Detected signs
+                  </span>
                   <strong>{totalDetectedSigns}</strong>
                 </div>
 
                 <div className="signlang_dashboard-stat-card">
-                  <span className="signlang_dashboard-stat-label">Top user</span>
+                  <span className="signlang_dashboard-stat-label">
+                    Time spent
+                  </span>
+                  <strong>{totalMinutesSpent} min</strong>
+                </div>
+
+                <div className="signlang_dashboard-stat-card">
+                  <span className="signlang_dashboard-stat-label">
+                    Top user
+                  </span>
                   <strong>{currentTopUser?.username || "—"}</strong>
                 </div>
               </div>
@@ -151,32 +211,42 @@ const Dashboard = () => {
               <div className="signlang_dashboard-card signlang_dashboard-card--chart">
                 <div className="signlang_dashboard-card-head">
                   <div>
-                    <span className="signlang_dashboard-card-kicker">Insights</span>
+                    <span className="signlang_dashboard-card-kicker">
+                      Insights
+                    </span>
                     <h2>Practice timeline</h2>
                   </div>
                 </div>
 
                 <div className="signlang_dashboard-chart-wrap">
-                  <ChartComp signDataList={signDataList} />
+                  <ChartComp signDataList={currentUserSessions} />
                 </div>
               </div>
 
               <div className="signlang_dashboard-card signlang_dashboard-card--leaderboard">
                 <div className="signlang_dashboard-card-head">
                   <div>
-                    <span className="signlang_dashboard-card-kicker">Community</span>
+                    <span className="signlang_dashboard-card-kicker">
+                      Community
+                    </span>
                     <h2>Top users</h2>
                   </div>
                 </div>
 
                 <div className="signlang_toprank-box">
                   {(topUsers || []).length === 0 ? (
-                    <p className="signlang_dashboard-empty">No users ranked yet.</p>
+                    <p className="signlang_dashboard-empty">
+                      No users ranked yet.
+                    </p>
                   ) : (
                     (topUsers || []).map((u, index) => {
                       const rank = u.rank ?? index + 1;
+
                       return (
-                        <div className="signlang_tank-row" key={u?.uid || index}>
+                        <div
+                          className="signlang_tank-row"
+                          key={u?.uid || index}
+                        >
                           <div className="signlang_tank-rank">{rank}</div>
 
                           <div className="signlang_tank-user">
@@ -195,7 +265,9 @@ const Dashboard = () => {
                           {getTrophy(rank) ? (
                             <img src={getTrophy(rank)} alt="trophy" />
                           ) : (
-                            <div className="signlang_tank-rank-badge">#{rank}</div>
+                            <div className="signlang_tank-rank-badge">
+                              #{rank}
+                            </div>
                           )}
                         </div>
                       );
@@ -209,7 +281,9 @@ const Dashboard = () => {
               <div className="signlang_dashboard-card signlang_dashboard-card--table">
                 <div className="signlang_dashboard-card-head">
                   <div>
-                    <span className="signlang_dashboard-card-kicker">Practice</span>
+                    <span className="signlang_dashboard-card-kicker">
+                      Practice
+                    </span>
                     <h2>Your most practiced signs</h2>
                   </div>
                 </div>
@@ -217,8 +291,6 @@ const Dashboard = () => {
                 {topFive.length === 0 ? (
                   <p className="signlang_dashboard-empty">
                     You have practice sessions saved, but no matched signs yet.
-                    Try lowering the match threshold temporarily or practice more
-                    until you get matches.
                   </p>
                 ) : (
                   <div className="signlang_table-wrap">
@@ -248,7 +320,9 @@ const Dashboard = () => {
               <div className="signlang_dashboard-card signlang_dashboard-card--quote">
                 <div className="signlang_dashboard-card-head">
                   <div>
-                    <span className="signlang_dashboard-card-kicker">Daily inspiration</span>
+                    <span className="signlang_dashboard-card-kicker">
+                      Daily inspiration
+                    </span>
                     <h2>Quote of the day</h2>
                   </div>
                 </div>

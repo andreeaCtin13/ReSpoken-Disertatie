@@ -1,4 +1,3 @@
-// src/redux/actions/authaction.js
 import { auth, googleProvider } from "../../firebase";
 import Cookies from "js-cookie";
 import {
@@ -7,8 +6,45 @@ import {
   LOGIN_REQ,
   LOGIN_SUCCESS,
   LOGOUT,
+  LOAD_SESSION,
 } from "../action-types";
 import { signInWithPopup, signOut } from "firebase/auth";
+
+const ACCESS_TOKEN_COOKIE = "sign-language-ai-access-token";
+const USER_COOKIE = "sign-language-ai-user";
+
+const getTwoHoursFromNow = () => {
+  return new Date(Date.now() + 2 * 60 * 60 * 1000);
+};
+
+const cookieOptions = {
+  expires: getTwoHoursFromNow(),
+  sameSite: "Lax",
+};
+
+export const loadSessionFromCookies = () => (dispatch) => {
+  const accessToken = Cookies.get(ACCESS_TOKEN_COOKIE);
+  const userCookie = Cookies.get(USER_COOKIE);
+
+  if (!accessToken || !userCookie) {
+    return;
+  }
+
+  try {
+    const user = JSON.parse(userCookie);
+
+    dispatch({
+      type: LOAD_SESSION,
+      payload: {
+        accessToken,
+        user,
+      },
+    });
+  } catch (error) {
+    Cookies.remove(ACCESS_TOKEN_COOKIE);
+    Cookies.remove(USER_COOKIE);
+  }
+};
 
 export const login = () => async (dispatch) => {
   try {
@@ -23,13 +59,11 @@ export const login = () => async (dispatch) => {
       name: res.user.displayName,
       photoURL: res.user.photoURL,
       userId: res.user.uid,
-      email:  res.user.email
+      email: res.user.email,
     };
 
-    Cookies.set("sign-language-ai-access-token", accessToken, { expires: 2 });
-    Cookies.set("sign-language-ai-user", JSON.stringify(profile), {
-      expires: 2,
-    });
+    Cookies.set(ACCESS_TOKEN_COOKIE, accessToken, cookieOptions);
+    Cookies.set(USER_COOKIE, JSON.stringify(profile), cookieOptions);
 
     dispatch({
       type: LOGIN_SUCCESS,
@@ -42,6 +76,7 @@ export const login = () => async (dispatch) => {
     });
   } catch (error) {
     console.error("LOGIN ERROR:", error);
+
     dispatch({
       type: LOGIN_FAIL,
       payload: error.message,
@@ -50,10 +85,17 @@ export const login = () => async (dispatch) => {
 };
 
 export const logout = () => async (dispatch) => {
-  await signOut(auth);
-
-  dispatch({ type: LOGOUT });
+  try {
+    await signOut(auth);
+  } catch (error) {
+    console.error("LOGOUT ERROR:", error);
+  }
 
   Cookies.remove("sign-language-ai-access-token");
   Cookies.remove("sign-language-ai-user");
+
+  localStorage.clear();
+  sessionStorage.clear();
+
+  dispatch({ type: LOGOUT });
 };
