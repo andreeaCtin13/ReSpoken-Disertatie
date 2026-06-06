@@ -35,7 +35,6 @@ self.addEventListener("fetch", (event) => {
 
   const requestUrl = new URL(event.request.url);
 
-  // Pentru fisiere statice NU returnam index.html
   if (
     requestUrl.pathname.startsWith("/static/") ||
     requestUrl.pathname.endsWith(".js") ||

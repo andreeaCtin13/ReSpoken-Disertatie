@@ -2,7 +2,7 @@
   position: relative;
   min-height: 100vh;
   overflow: hidden;
-  padding-top: 5rem; /* fix pentru navbar fixed/sticky */
+  padding-top: 5rem;
   padding-bottom: 4rem;
 }
 
@@ -83,7 +83,7 @@
 
 .signlang_dashboard-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -325,6 +325,126 @@
   background: rgba(255, 255, 255, 0.015);
 }
 
+/* DAILY PRACTICE ACCORDION */
+
+.signlang_daily-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.signlang_daily-item {
+  border-radius: 1.25rem;
+  overflow: hidden;
+  border: 0.0625rem solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.signlang_daily-summary {
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  padding: 1rem 1.1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.035);
+  color: #ffffff;
+  text-align: left;
+  font-family: inherit;
+}
+
+.signlang_daily-summary strong {
+  display: block;
+  color: #ffffff;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.signlang_daily-summary span {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.signlang_daily-arrow {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(145, 95, 255, 0.18);
+  color: #f1dcff !important;
+  font-size: 1.3rem !important;
+  font-weight: 800;
+}
+
+.signlang_daily-details {
+  padding: 1rem;
+}
+
+/* PROGRESS OVERVIEW */
+
+.signlang_progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.signlang_progress-item {
+  padding: 1rem;
+  border-radius: 1.2rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 0.0625rem solid rgba(255, 255, 255, 0.07);
+}
+
+.signlang_progress-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 0.7rem;
+}
+
+.signlang_progress-top strong {
+  color: #ffffff;
+  font-size: 0.98rem;
+}
+
+.signlang_progress-top span {
+  color: #ffb32c;
+  font-weight: 800;
+}
+
+.signlang_progress-bar {
+  width: 100%;
+  height: 0.55rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.signlang_progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #915fff 0%, #d88ccc 60%, #f2a16f 100%);
+}
+
+.signlang_progress-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
+  margin-top: 0.7rem;
+}
+
+.signlang_progress-meta span {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.82rem;
+}
+
 /* QUOTE */
 
 .signlang_quotes-box {
@@ -336,6 +456,11 @@
   border: 0.0625rem solid rgba(255, 255, 255, 0.07);
 }
 
+.signlang_quotes-box--small {
+  margin-top: 1.3rem;
+  padding: 1.1rem 1.2rem;
+}
+
 .signlang_quotes-box blockquote {
   margin: 0;
   color: rgba(255, 255, 255, 0.88);
@@ -344,6 +469,11 @@
   font-style: italic;
   position: relative;
   padding-left: 2.4rem;
+}
+
+.signlang_quotes-box--small blockquote {
+  font-size: 0.94rem;
+  line-height: 1.7;
 }
 
 .signlang_quotes-box blockquote::before {
@@ -383,6 +513,7 @@
   height: auto;
 }
 
+.signlang__nodata-content h2,
 .signlang__nodata-content h3 {
   margin: 0;
   color: #ffffff;
@@ -425,10 +556,13 @@
   .signlang_dashboard-grid-bottom {
     grid-template-columns: 1fr;
   }
+
+  .signlang_dashboard-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media screen and (max-width: 900px) {
-
   .signlang_dashboard-container {
     width: min(94%, 88rem);
   }
@@ -460,7 +594,6 @@
 }
 
 @media screen and (max-width: 600px) {
- 
   .signlang_dashboard-card {
     padding: 1.15rem;
     border-radius: 1.25rem;
@@ -500,5 +633,9 @@
   .signlang_tank-row img {
     width: 1.9rem;
     height: 1.9rem;
+  }
+
+  .signlang_progress-meta {
+    flex-direction: column;
   }
 }

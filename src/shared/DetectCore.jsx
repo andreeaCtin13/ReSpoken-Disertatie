@@ -13,12 +13,33 @@ import ProgressBar from "../components/Detect/ProgressBar/ProgressBar";
 
 let startTime = null;
 
-const PRACTICE_DETECT_THRESHOLD = 0.12;
-const MATCH_THRESHOLD = 0.16;
+const PRACTICE_DETECT_THRESHOLD = 0.5;
+const MATCH_THRESHOLD = 0.5;
 const BASE_POINTS = 50;
 const MOBILE_BREAKPOINT = 800;
+const PROMPT_DURATION_MS = 5000;
 
 const normalizeSign = (s) => (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+const getSignLabel = (img) => img?.sign || img?.name || "";
+
+const pickRandomPrompt = (previousPrompt = null) => {
+  if (!Array.isArray(SignImageData) || SignImageData.length === 0) return null;
+  if (SignImageData.length === 1) return SignImageData[0];
+
+  let nextPrompt = null;
+  let tries = 0;
+
+  do {
+    nextPrompt = SignImageData[Math.floor(Math.random() * SignImageData.length)];
+    tries += 1;
+  } while (
+    tries < 20 &&
+    previousPrompt &&
+    normalizeSign(getSignLabel(nextPrompt)) === normalizeSign(getSignLabel(previousPrompt))
+  );
+
+  return nextPrompt;
+};
 
 const DetectCore = ({ mode = "translate" }) => {
   const webcamRef = useRef(null);
@@ -30,14 +51,17 @@ const DetectCore = ({ mode = "translate" }) => {
   const currentImageRef = useRef(null);
   const modeRef = useRef(mode);
 
+  const practiceCountsRef = useRef(new Map());
+  const practiceStatsRef = useRef({ attempts: 0, matches: 0, totalPoints: 0 });
+  const matchedCurrentPromptRef = useRef(false);
+  const matchedPromptsRef = useRef([]);
+  const currentPromptKeyRef = useRef(0);
+  const promptIntervalRef = useRef(null);
+
   const [webcamRunning, setWebcamRunning] = useState(false);
   const [gestureOutput, setGestureOutput] = useState("");
   const [progress, setProgress] = useState(0);
   const [detectedData, setDetectedData] = useState([]);
-
-  const practiceCountsRef = useRef(new Map());
-  const practiceStatsRef = useRef({ attempts: 0, matches: 0, totalPoints: 0 });
-  const matchedCurrentPromptRef = useRef(false);
 
   const user = useSelector((state) => state.auth?.user);
   const { accessToken } = useSelector((state) => state.auth);
@@ -67,39 +91,71 @@ const DetectCore = ({ mode = "translate" }) => {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  useEffect(() => {
-    let intervalId;
-
-    if (webcamRunning && mode === "practice" && SignImageData?.length) {
-      setCurrentImage(
-        (prev) =>
-          prev ?? SignImageData[Math.floor(Math.random() * SignImageData.length)]
-      );
-
-      intervalId = setInterval(() => {
-        setCurrentImage(
-          SignImageData[Math.floor(Math.random() * SignImageData.length)]
-        );
-      }, 5000);
-    } else {
-      setCurrentImage(null);
+  const stopPromptInterval = useCallback(() => {
+    if (promptIntervalRef.current) {
+      clearInterval(promptIntervalRef.current);
+      promptIntervalRef.current = null;
     }
+  }, []);
 
-    return () => clearInterval(intervalId);
-  }, [webcamRunning, mode]);
+  const moveToNextPrompt = useCallback((reason = "manual") => {
+    if (modeRef.current !== "practice") return;
 
-  useEffect(() => {
-    setMatchMsg("");
-    setPromptMatched(false);
-    matchedCurrentPromptRef.current = false;
+    setCurrentImage((previousPrompt) => {
+      const nextPrompt = pickRandomPrompt(previousPrompt);
 
-    if (webcamRunning && mode === "practice" && currentImage) {
+      if (!nextPrompt) return previousPrompt;
+
+      currentPromptKeyRef.current += 1;
+      matchedCurrentPromptRef.current = false;
+
+      setPromptMatched(false);
+      setMatchMsg("");
+
+      const newAttempts = practiceStatsRef.current.attempts + 1;
+
       practiceStatsRef.current = {
         ...practiceStatsRef.current,
-        attempts: practiceStatsRef.current.attempts + 1,
+        attempts: newAttempts,
       };
+
+      console.log("[ATTEMPT ADDED]", {
+        prompt: getSignLabel(nextPrompt),
+        attemptsToday: newAttempts,
+      });
+      
+      console.log("[PRACTICE NEW PROMPT]", {
+        reason,
+        promptKey: currentPromptKeyRef.current,
+        previousPrompt: getSignLabel(previousPrompt),
+        nextPrompt: getSignLabel(nextPrompt),
+        statsAfterAttemptIncrement: practiceStatsRef.current,
+      });
+
+      return nextPrompt;
+    });
+  }, []);
+
+  useEffect(() => {
+    stopPromptInterval();
+
+    if (webcamRunning && mode === "practice" && SignImageData?.length) {
+      moveToNextPrompt("session-start");
+
+      promptIntervalRef.current = setInterval(() => {
+        moveToNextPrompt("interval");
+      }, PROMPT_DURATION_MS);
     }
-  }, [currentImage?.id, webcamRunning, mode, currentImage]);
+
+    if (!webcamRunning || mode !== "practice") {
+      setCurrentImage(null);
+      matchedCurrentPromptRef.current = false;
+      setPromptMatched(false);
+      setMatchMsg("");
+    }
+
+    return () => stopPromptInterval();
+  }, [webcamRunning, mode, moveToNextPrompt, stopPromptInterval]);
 
   useEffect(() => {
     let cancelled = false;
@@ -171,6 +227,7 @@ const DetectCore = ({ mode = "translate" }) => {
 
     const vw = video.videoWidth;
     const vh = video.videoHeight;
+
     if (!vw || !vh) {
       requestRef.current = requestAnimationFrame(predictWebcam);
       return;
@@ -219,7 +276,7 @@ const DetectCore = ({ mode = "translate" }) => {
             source: "respoken",
             type: "translation",
             text: gestureName,
-            score: score,
+            score,
           },
           "*"
         );
@@ -238,60 +295,60 @@ const DetectCore = ({ mode = "translate" }) => {
           return;
         }
 
-        const targetRaw = liveImage.sign || liveImage.name || "";
+        const targetRaw = getSignLabel(liveImage);
         const target = normalizeSign(targetRaw);
         const detected = normalizeSign(gestureName);
 
-        const sameSign =
-          target &&
-          detected &&
-          (detected === target ||
-            detected.includes(target) ||
-            target.includes(detected));
-
+        const sameSign = target && detected && detected === target;
         const isMatch = sameSign && score >= MATCH_THRESHOLD;
 
-        console.log("[PRACTICE CHECK]", {
-          targetRaw,
-          target,
-          gestureName,
-          detected,
-          score,
-          sameSign,
-          isMatch,
-          alreadyMatched: matchedCurrentPromptRef.current,
-        });
-
-        if (isMatch) {
+        if (isMatch && !matchedCurrentPromptRef.current) {
+          matchedCurrentPromptRef.current = true;
           setPromptMatched(true);
 
-          if (!matchedCurrentPromptRef.current) {
-            matchedCurrentPromptRef.current = true;
+          const points = Math.max(1, Math.round(BASE_POINTS * score));
 
-            const m = practiceCountsRef.current;
-            m.set(targetRaw, (m.get(targetRaw) || 0) + 1);
+          matchedPromptsRef.current.push({
+            promptKey: currentPromptKeyRef.current,
+            SignDetected: targetRaw,
+            score,
+            points,
+            createdAt: new Date().toISOString(),
+          });
 
-            const points = Math.max(1, Math.round(BASE_POINTS * score));
+          const m = practiceCountsRef.current;
+          m.set(targetRaw, (m.get(targetRaw) || 0) + 1);
 
-            practiceStatsRef.current = {
-              attempts: practiceStatsRef.current.attempts,
-              matches: practiceStatsRef.current.matches + 1,
-              totalPoints: practiceStatsRef.current.totalPoints + points,
-            };
+          practiceStatsRef.current = {
+            attempts: practiceStatsRef.current.attempts,
+            matches: matchedPromptsRef.current.length,
+            totalPoints: matchedPromptsRef.current.reduce(
+              (acc, item) => acc + Number(item.points || 0),
+              0
+            ),
+          };
 
-            setMatchMsg(
-              `✅ MATCH CONFIRMED: ${targetRaw} — saved (${Math.round(score * 100)}%)`
-            );
-          } else {
-            setMatchMsg(
-              `✅ Already matched for this prompt: ${targetRaw} (${Math.round(score * 100)}%)`
-            );
-          }
-        } else {
-          if (!matchedCurrentPromptRef.current) {
-            setPromptMatched(false);
-            setMatchMsg(`❌ Detected: ${gestureName} (${Math.round(score * 100)}%)`);
-          }
+          console.log("[PRACTICE MATCH SAVED ONCE]", {
+            promptKey: currentPromptKeyRef.current,
+            targetRaw,
+            gestureName,
+            score,
+            matchedPrompts: matchedPromptsRef.current,
+            signsMap: Array.from(practiceCountsRef.current.entries()),
+            statsAfterMatch: practiceStatsRef.current,
+          });
+
+          setMatchMsg(
+            `✅ MATCH CONFIRMED: ${targetRaw} — saved (${Math.round(score * 100)}%)`
+          );
+        } else if (isMatch && matchedCurrentPromptRef.current) {
+          setPromptMatched(true);
+          setMatchMsg(
+            `✅ Already matched for this prompt: ${targetRaw} (${Math.round(score * 100)}%)`
+          );
+        } else if (!matchedCurrentPromptRef.current) {
+          setPromptMatched(false);
+          setMatchMsg(`❌ Detected: ${gestureName} (${Math.round(score * 100)}%)`);
         }
       }
     } catch (e) {
@@ -313,6 +370,7 @@ const DetectCore = ({ mode = "translate" }) => {
       webcamRunningRef.current = false;
       setWebcamRunning(false);
       stopLoop();
+      stopPromptInterval();
       clearCanvas();
 
       const endTime = new Date();
@@ -323,15 +381,40 @@ const DetectCore = ({ mode = "translate" }) => {
       const userId = user?.uid || user?.id || user?.userId;
 
       if (mode === "practice") {
-        const signsPerformed = Array.from(practiceCountsRef.current.entries()).map(
+        const signMap = new Map();
+
+        for (const item of matchedPromptsRef.current) {
+          signMap.set(
+            item.SignDetected,
+            (signMap.get(item.SignDetected) || 0) + 1
+          );
+        }
+
+        const signsPerformed = Array.from(signMap.entries()).map(
           ([sign, count]) => ({ SignDetected: sign, count })
         );
 
-        const stats = practiceStatsRef.current;
+        const matchedSignsCount = matchedPromptsRef.current.length;
 
-        console.log("[PRACTICE SAVE]", {
+        const rawStats = practiceStatsRef.current;
+
+        const stats = {
+          attempts: Number(rawStats.attempts || 0),
+          matches: matchedSignsCount,
+          totalPoints: matchedPromptsRef.current.reduce(
+            (acc, item) => acc + Number(item.points || 0),
+            0
+          ),
+        };
+
+        console.log("[PRACTICE SAVE - FINAL]", {
+          userId,
+          timeElapsed,
+          matchedPrompts: matchedPromptsRef.current,
           signsPerformed,
-          stats,
+          matchedSignsCount,
+          rawStats,
+          finalStatsSentToRedux: stats,
         });
 
         dispatch(
@@ -349,7 +432,9 @@ const DetectCore = ({ mode = "translate" }) => {
 
         practiceCountsRef.current = new Map();
         practiceStatsRef.current = { attempts: 0, matches: 0, totalPoints: 0 };
+        matchedPromptsRef.current = [];
         matchedCurrentPromptRef.current = false;
+        currentPromptKeyRef.current = 0;
         setPromptMatched(false);
       }
 
@@ -371,8 +456,12 @@ const DetectCore = ({ mode = "translate" }) => {
         if (current) resultArray.push(current);
 
         const countMap = new Map();
+
         for (const item of resultArray) {
-          countMap.set(item.SignDetected, (countMap.get(item.SignDetected) || 0) + 1);
+          countMap.set(
+            item.SignDetected,
+            (countMap.get(item.SignDetected) || 0) + 1
+          );
         }
 
         const outputArray = Array.from(countMap.entries())
@@ -407,27 +496,41 @@ const DetectCore = ({ mode = "translate" }) => {
 
       practiceCountsRef.current = new Map();
       practiceStatsRef.current = { attempts: 0, matches: 0, totalPoints: 0 };
+      matchedPromptsRef.current = [];
       matchedCurrentPromptRef.current = false;
-      setPromptMatched(false);
+      currentPromptKeyRef.current = 0;
 
-      if (mode === "practice" && SignImageData?.length) {
-        setCurrentImage(
-          SignImageData[Math.floor(Math.random() * SignImageData.length)]
-        );
-      }
+      setPromptMatched(false);
+      setMatchMsg("");
 
       webcamRunningRef.current = true;
       setWebcamRunning(true);
+
+      console.log("[PRACTICE SESSION START]", {
+        mode,
+        userId: user?.uid || user?.id || user?.userId,
+      });
+
       requestRef.current = requestAnimationFrame(predictWebcam);
     }
-  }, [mode, detectedData, user, dispatch, clearCanvas, stopLoop, predictWebcam]);
+  }, [
+    mode,
+    detectedData,
+    user,
+    dispatch,
+    clearCanvas,
+    stopLoop,
+    stopPromptInterval,
+    predictWebcam,
+  ]);
 
   useEffect(() => {
     return () => {
       webcamRunningRef.current = false;
       stopLoop();
+      stopPromptInterval();
     };
-  }, [stopLoop]);
+  }, [stopLoop, stopPromptInterval]);
 
   const modeLabel = mode === "translate" ? "Translate mode" : "Practice mode";
   const modeTitle =
@@ -449,7 +552,8 @@ const DetectCore = ({ mode = "translate" }) => {
         mode === "practice" && promptMatched
           ? {
               border: "2px solid rgba(46, 204, 113, 0.9)",
-              boxShadow: "0 0 0 2px rgba(46, 204, 113, 0.18), 0 0 30px rgba(46, 204, 113, 0.18)",
+              boxShadow:
+                "0 0 0 2px rgba(46, 204, 113, 0.18), 0 0 30px rgba(46, 204, 113, 0.18)",
               background:
                 "linear-gradient(180deg, rgba(10, 35, 24, 0.95) 0%, rgba(11, 20, 34, 0.96) 100%)",
             }
@@ -463,17 +567,26 @@ const DetectCore = ({ mode = "translate" }) => {
       >
         <div>
           <span className="signlang_detection-card-kicker">
-            {mode === "practice" && promptMatched ? "Recognition saved" : "Recognition"}
+            {mode === "practice" && promptMatched
+              ? "Recognition saved"
+              : "Recognition"}
           </span>
-          <h2>{mode === "practice" && promptMatched ? "Matched successfully" : "Live result"}</h2>
+          <h2>
+            {mode === "practice" && promptMatched
+              ? "Matched successfully"
+              : "Live result"}
+          </h2>
         </div>
       </div>
 
       <div className="signlang_detection-result-box signlang_detection-result-box--big">
         <div>
           <span className="signlang_detection-result-label">
-            {mode === "practice" && promptMatched ? "Recognized prompt" : "Translated sign"}
+            {mode === "practice" && promptMatched
+              ? "Recognized prompt"
+              : "Translated sign"}
           </span>
+
           <p
             className="gesture_output gesture_output--large"
             style={
@@ -543,11 +656,7 @@ const DetectCore = ({ mode = "translate" }) => {
           </div>
 
           <div className="signlang_detection-stage signlang_detection-stage--compact">
-            <Webcam
-              audio={false}
-              ref={webcamRef}
-              className="signlang_webcam"
-            />
+            <Webcam audio={false} ref={webcamRef} className="signlang_webcam" />
             <canvas ref={canvasRef} className="signlang_canvas" />
           </div>
 
@@ -609,11 +718,7 @@ const DetectCore = ({ mode = "translate" }) => {
           </div>
 
           <div className="signlang_detection-stage signlang_detection-stage--compact">
-            <Webcam
-              audio={false}
-              ref={webcamRef}
-              className="signlang_webcam"
-            />
+            <Webcam audio={false} ref={webcamRef} className="signlang_webcam" />
             <canvas ref={canvasRef} className="signlang_canvas" />
           </div>
 
@@ -664,7 +769,9 @@ const DetectCore = ({ mode = "translate" }) => {
           <div className="signlang_detection-practice-card">
             <div className="signlang_detection-card-head">
               <div>
-                <span className="signlang_detection-card-kicker">Practice prompt</span>
+                <span className="signlang_detection-card-kicker">
+                  Practice prompt
+                </span>
                 <h2>Current sign to perform</h2>
               </div>
             </div>
@@ -681,7 +788,7 @@ const DetectCore = ({ mode = "translate" }) => {
                       Do the sign for
                     </p>
                     <p className="signlang_detection-practice-text">
-                      <b>{currentImage.sign || currentImage.name}</b>
+                      <b>{getSignLabel(currentImage)}</b>
                     </p>
                   </div>
                 </div>
@@ -738,7 +845,7 @@ const DetectCore = ({ mode = "translate" }) => {
                     Do this sign
                   </span>
                   <p className="signlang_detection-mobile-practice-overlay-text">
-                    {currentImage.sign || currentImage.name}
+                    {getSignLabel(currentImage)}
                   </p>
                 </div>
               </>
@@ -751,11 +858,7 @@ const DetectCore = ({ mode = "translate" }) => {
 
             <div className="signlang_detection-mobile-self-preview">
               <div className="signlang_detection-mobile-self-preview-shell">
-                <Webcam
-                  audio={false}
-                  ref={webcamRef}
-                  className="signlang_webcam"
-                />
+                <Webcam audio={false} ref={webcamRef} className="signlang_webcam" />
                 <canvas ref={canvasRef} className="signlang_canvas" />
               </div>
             </div>
@@ -825,11 +928,13 @@ const DetectCore = ({ mode = "translate" }) => {
 
       <div className="signlang_detection-container">
         {accessToken ? (
-          mode === "translate"
-            ? renderTranslateLayout()
-            : isMobilePractice
-            ? renderPracticeMobileLayout()
-            : renderPracticeDesktopLayout()
+          mode === "translate" ? (
+            renderTranslateLayout()
+          ) : isMobilePractice ? (
+            renderPracticeMobileLayout()
+          ) : (
+            renderPracticeDesktopLayout()
+          )
         ) : (
           <div className="signlang_detection_notLoggedIn">
             <div className="signlang_detection_login-card">
