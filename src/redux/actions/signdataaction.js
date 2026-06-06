@@ -17,9 +17,6 @@ import {
   increment,
 } from "firebase/firestore";
 
-// ===================
-// ACTION TYPES
-// ===================
 export const SIGNDATA_LOADING = "SIGNDATA_LOADING";
 export const SIGNDATA_SUCCESS = "SIGNDATA_SUCCESS";
 export const SIGNDATA_FAIL = "SIGNDATA_FAIL";
@@ -29,16 +26,12 @@ export const TOPUSERS_FAIL = "TOPUSERS_FAIL";
 
 export const PRACTICE_ATTEMPT_ADD = "PRACTICE_ATTEMPT_ADD";
 
-// ===================
-// OPTIONAL: store attempts locally
-// ===================
+
 export const savePracticeAttempt = (payload) => (dispatch) => {
   dispatch({ type: PRACTICE_ATTEMPT_ADD, payload });
 };
 
-// ===================
-// ADD SESSION + UPDATE USER TOTALS
-// ===================
+
 export const addSignData = (payload) => async (dispatch, getState) => {
   try {
     const state = getState();
@@ -117,9 +110,6 @@ export const addSignData = (payload) => async (dispatch, getState) => {
   }
 };
 
-// ===================
-// GET SESSIONS FOR CURRENT USER ONLY
-// ===================
 export const getSignData = (explicitUserId = null) => async (dispatch, getState) => {
   try {
     dispatch({ type: SIGNDATA_LOADING });
@@ -183,9 +173,6 @@ export const getSignData = (explicitUserId = null) => async (dispatch, getState)
   }
 };
 
-// ===================
-// GET LEADERBOARD
-// ===================
 export const getTopUsers = () => async (dispatch) => {
   try {
     const q = query(

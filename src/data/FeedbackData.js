@@ -1,17 +1,17 @@
 export const userFeedback = [
     {
-        title: "Tejas Phanse",
-        text: "The sign language AI web app is an innovative and user-friendly tool that accurately detects hand gestures and translates them into corresponding signs. Its ensures reliable performance, making it an excellent resource for communication and education.",
-        tag: "Business Analyst"
+        title: "Andreea Constantin",
+        text: "Developing the ReSpoken application was both a technical and accessibility-focused challenge. The main goal was to create an intuitive and easy-to-use platform that helps users communicate and learn sign language through modern gesture recognition technologies.",
+        tag: "Developer"
     },
     {
-        title: "Atharva Mulgund",
-        text: "The user experinece of the application is very smooth and easy to understand. Used this application to try out different signs in ASL and detection was smooth and prompt.",
-        tag: "Front End developer"
+        title: "Daniel Lolici",
+        text: "Applications of this type can have a significant impact on the inclusion of people with hearing disabilities. ReSpoken provides a modern and accessible approach, helping increase the visibility of sign language and improving communication in digital environments.",
+        tag: "President of the National Association of the Deaf in Romania"
     },
     {
-        title: "Angad Singh Obbi",
-        text: "The advancement in the field of sign language is really helpful for the deaf  and dumb this eliminates the need of a middle by just using the website, and last but not the least the UI is super smooth and user-friendly.",
-        tag: "Network Security Analyst"
+        title: "Marina Apostol",
+        text: "The application is easy to use and very helpful for people who want to learn or better understand sign language. The interface is clear, and the gesture detection feature makes the experience more interactive and accessible.",
+        tag: "ANSR Volunteer & Hearing-Impaired Person"
     }
 ]

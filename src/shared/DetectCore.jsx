@@ -213,7 +213,6 @@ const DetectCore = ({ mode = "translate" }) => {
       setGestureOutput(gestureName);
       setProgress(Math.round(score * 100));
 
-      // WIDGET
       if (gestureName && score > 0.5) {
         window.postMessage(
           {

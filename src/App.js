@@ -41,7 +41,6 @@ function App() {
           }
         />
 
-        {/* TRANSLATE */}
         <Route
           path="/detect"
           element={
@@ -51,7 +50,6 @@ function App() {
           }
         />
 
-        {/* PRACTICE */}
         <Route
           path="/practice"
           element={
@@ -69,8 +67,6 @@ function App() {
             </Layout>
           }
         />
-
-        <Route path="*" element={<NotFound />} />
       </Routes>
 
       <ToastContainer
